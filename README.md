@@ -1,1 +1,1 @@
-# SmartHiveClient
+# SmartHive
