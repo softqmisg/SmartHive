@@ -1,0 +1,44 @@
+Board Information Report
+Filename     : D:\Designs\Sanjeh\SmartHive\SmatHiveClient\PCB&SCH\SmartHive_Client.PcbDoc
+Date         : 2022-07-12
+Time         : 5:15:54 PM
+Time Elapsed : 00:00:00
+
+General
+    Board Size, 120mmx78mm
+    Components on board, 85
+count : 2
+
+Pad Solder Mask, Count
+    0.06mm, 16
+    0.1mm, 4
+    0.1016mm, 239
+count : 3
+
+Pad Paste Mask, Count
+    0mm, 259
+count : 1
+
+Pad Pwr/Gnd Expansion, Count
+    0.508mm, 259
+count : 1
+
+Pad Relief Conductor Width, Count
+    0.254mm, 259
+count : 1
+
+Pad Relief Air Gap, Count
+    0.254mm, 259
+count : 1
+
+Pad Relief Entries, Count
+    4, 259
+count : 1
+
+Via Solder Mask, Count
+    0.1mm, 32
+count : 1
+
+Via Pwr/Gnd Expansion, Count
+    0.508mm, 32
+count : 1

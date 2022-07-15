@@ -86,7 +86,7 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
-DocumentUniqueId=
+DocumentUniqueId=URSPSJFV
 
 [Document4]
 DocumentPath=SmartHive_Client.PcbDoc
@@ -104,6 +104,10 @@ ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=HYEKNXIY
+
+[GeneratedDocument1]
+DocumentPath=Project Outputs for SmartHive_Client\Design Rule Check - SmartHive_Client.html
+DItemRevisionGUID=
 
 [Configuration1]
 Name=Sources
