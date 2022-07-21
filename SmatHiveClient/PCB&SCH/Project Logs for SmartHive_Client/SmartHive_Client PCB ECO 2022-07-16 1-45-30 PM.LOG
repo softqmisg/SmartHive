@@ -1,0 +1,5 @@
+Added Pin To Net: NetName=ESP32_GPIO36_THERMALFEEDBACK Pin=Q1-3
+Added Pin To Net: NetName=ESP32_GPIO36_THERMALFEEDBACK Pin=R22-2
+Added Pin To Net: NetName=ESP32_GPIO36_THERMALFEEDBACK Pin=U4-4
+Added Net: Name=ESP32_GPIO36_THERMALFEEDBACK
+Added Member To Class: ClassName=SmartHive_Client Member=Component M2 Screw3mm
