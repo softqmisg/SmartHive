@@ -65,10 +65,6 @@ void IRAM_ATTR onKeyPress(void)
     last_button_time=button_time;
   }
 }
-void dateTime(uint16_t* date, uint16_t* time)
-{
-
-}
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -107,7 +103,6 @@ void setup() {
   {
     Serial.println("init ds1307");
   }
-  // //set rtc_int
   if(rtc_ext.readnvram(2)!=0xAA)
   {
     Serial.println("Write new nvram ds1307 ");
@@ -118,8 +113,9 @@ void setup() {
   {
     Serial.println("Read nvram ds1307 was ok");
   }
-
-  
+  //set rtc_int
+    DateTime now=rtc_ext.now();
+  rtc_int.setTime(now.unixtime());  
   //init SDCARD
   SPIClass spi(HSPI);
   spi.begin(ESP32_GPIO14_SDSCK,ESP32_GPIO12_SDMISO,ESP32_GPIO13_SDMOSI,ESP32_GPIO26_SDCS);
@@ -170,7 +166,6 @@ void loop() {
     portEXIT_CRITICAL(&timer0Mux);   
 
     DateTime now=rtc_ext.now();
-  // rtc_int.setTime(now.unixtime());
     Serial.print(now.year(), DEC);
     Serial.print('/');
     Serial.print(now.month(), DEC);
