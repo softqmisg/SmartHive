@@ -114,7 +114,7 @@ void setup() {
     Serial.println("Read nvram ds1307 was ok");
   }
   //set rtc_int
-    DateTime now=rtc_ext.now();
+   DateTime now=rtc_ext.now();
   rtc_int.setTime(now.unixtime());  
   //init SDCARD
   SPIClass spi(HSPI);
