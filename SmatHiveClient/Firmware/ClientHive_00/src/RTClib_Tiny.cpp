@@ -203,47 +203,48 @@ TimeSpan TimeSpan::operator-(const TimeSpan& right) {
 static uint8_t bcd2bin (uint8_t val) { return val - 6 * (val >> 4); }
 static uint8_t bin2bcd (uint8_t val) { return val + 6 * (val / 10); }
 
-boolean RTC_DS1307::begin(void) {
-	WIRENAME.begin();
+boolean RTC_DS1307::begin(SoftWire *wire) {
+  _wire=wire;
+	_wire->begin();
   return true;
 }
 
 uint8_t RTC_DS1307::isrunning(void) {
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write((byte)0);
-  WIRENAME.endTransmission();
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write((byte)0);
+  _wire->endTransmission();
 
-  WIRENAME.requestFrom(DS1307_ADDRESS, 1);
-  uint8_t ss = WIRENAME.read();
+  _wire->requestFrom(DS1307_ADDRESS, 1);
+  uint8_t ss = _wire->read();
   return !(ss>>7);
 }
 
 void RTC_DS1307::adjust(const DateTime& dt) {
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write((byte)0); // start at location 0
-  WIRENAME.write(bin2bcd(dt.second()));
-  WIRENAME.write(bin2bcd(dt.minute()));
-  WIRENAME.write(bin2bcd(dt.hour()));
-  WIRENAME.write(bin2bcd(0));
-  WIRENAME.write(bin2bcd(dt.day()));
-  WIRENAME.write(bin2bcd(dt.month()));
-  WIRENAME.write(bin2bcd(dt.year() - 2000));
-  WIRENAME.endTransmission();
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write((byte)0); // start at location 0
+  _wire->write(bin2bcd(dt.second()));
+  _wire->write(bin2bcd(dt.minute()));
+  _wire->write(bin2bcd(dt.hour()));
+  _wire->write(bin2bcd(0));
+  _wire->write(bin2bcd(dt.day()));
+  _wire->write(bin2bcd(dt.month()));
+  _wire->write(bin2bcd(dt.year() - 2000));
+  _wire->endTransmission();
 }
 
 DateTime RTC_DS1307::now() {
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write((byte)0);	
-  WIRENAME.endTransmission();
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write((byte)0);	
+  _wire->endTransmission();
 
-  WIRENAME.requestFrom(DS1307_ADDRESS, 7);
-  uint8_t ss = bcd2bin(WIRENAME.read() & 0x7F);
-  uint8_t mm = bcd2bin(WIRENAME.read());
-  uint8_t hh = bcd2bin(WIRENAME.read());
-  WIRENAME.read();
-  uint8_t d = bcd2bin(WIRENAME.read());
-  uint8_t m = bcd2bin(WIRENAME.read());
-  uint16_t y = bcd2bin(WIRENAME.read()) + 2000;
+  _wire->requestFrom(DS1307_ADDRESS, 7);
+  uint8_t ss = bcd2bin(_wire->read() & 0x7F);
+  uint8_t mm = bcd2bin(_wire->read());
+  uint8_t hh = bcd2bin(_wire->read());
+  _wire->read();
+  uint8_t d = bcd2bin(_wire->read());
+  uint8_t m = bcd2bin(_wire->read());
+  uint16_t y = bcd2bin(_wire->read()) + 2000;
   
   return DateTime (y, m, d, hh, mm, ss);
 }
@@ -251,44 +252,44 @@ DateTime RTC_DS1307::now() {
 Ds1307SqwPinMode RTC_DS1307::readSqwPinMode() {
   int mode;
 
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write(DS1307_CONTROL);
-  WIRENAME.endTransmission();
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write(DS1307_CONTROL);
+  _wire->endTransmission();
   
-  WIRENAME.requestFrom((uint8_t)DS1307_ADDRESS, (uint8_t)1);
-  mode = WIRENAME.read();
+  _wire->requestFrom((uint8_t)DS1307_ADDRESS, (uint8_t)1);
+  mode = _wire->read();
 
   mode &= 0x93;
   return static_cast<Ds1307SqwPinMode>(mode);
 }
 
 void RTC_DS1307::writeSqwPinMode(Ds1307SqwPinMode mode) {
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write(DS1307_CONTROL);
-  WIRENAME.write(mode);
-  WIRENAME.endTransmission();
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write(DS1307_CONTROL);
+  _wire->write(mode);
+  _wire->endTransmission();
 }
 
 void RTC_DS1307::readnvram(uint8_t* buf, uint8_t size, uint8_t address) {
   int addrByte = DS1307_NVRAM + address;
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write(addrByte);
-  WIRENAME.endTransmission();
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write(addrByte);
+  _wire->endTransmission();
   
-  WIRENAME.requestFrom((uint8_t) DS1307_ADDRESS, size);
+  _wire->requestFrom((uint8_t) DS1307_ADDRESS, size);
   for (uint8_t pos = 0; pos < size; ++pos) {
-    buf[pos] = WIRENAME.read();
+    buf[pos] = _wire->read();
   }
 }
 
 void RTC_DS1307::writenvram(uint8_t address, uint8_t* buf, uint8_t size) {
   int addrByte = DS1307_NVRAM + address;
-  WIRENAME.beginTransmission(DS1307_ADDRESS);
-  WIRENAME.write(addrByte);
+  _wire->beginTransmission(DS1307_ADDRESS);
+  _wire->write(addrByte);
   for (uint8_t pos = 0; pos < size; ++pos) {
-    WIRENAME.write(buf[pos]);
+    _wire->write(buf[pos]);
   }
-  WIRENAME.endTransmission();
+  _wire->endTransmission();
 }
 
 uint8_t RTC_DS1307::readnvram(uint8_t address) {

@@ -5,10 +5,11 @@
 #ifndef _RTCLIB_H_
 #define _RTCLIB_H_
 #include "SoftWire.h"
-extern SoftWire I2C_3;
 #include "AsyncDelay.h"
-extern AsyncDelay readInterval;
-#define WIRENAME I2C_3
+
+// extern AsyncDelay readInterval;
+// extern SoftWire I2C_3;
+// #define WIRENAME I2C_3
 
 
 
@@ -17,6 +18,7 @@ class TimeSpan;
 
 // Simple general-purpose date/time class (no TZ / DST / leap second handling!)
 class DateTime {
+
 public:
     DateTime (uint32_t t =0);
     DateTime (uint16_t year, uint8_t month, uint8_t day,
@@ -68,13 +70,21 @@ protected:
 enum Ds1307SqwPinMode { OFF = 0x00, ON = 0x80, SquareWave1HZ = 0x10, SquareWave4kHz = 0x11, SquareWave8kHz = 0x12, SquareWave32kHz = 0x13 };
 
 class RTC_DS1307 {
+    private:
+    SoftWire *_wire;
 public:
-    boolean begin(void);
-    static void adjust(const DateTime& dt);
+    boolean begin(SoftWire *wire);
     uint8_t isrunning(void);
-    static DateTime now();
-    static Ds1307SqwPinMode readSqwPinMode();
-    static void writeSqwPinMode(Ds1307SqwPinMode mode);
+
+    // static void adjust(const DateTime& dt);
+    // static DateTime now();
+    // static Ds1307SqwPinMode readSqwPinMode();
+    // static void writeSqwPinMode(Ds1307SqwPinMode mode);
+
+     void adjust(const DateTime& dt);
+     DateTime now();
+     Ds1307SqwPinMode readSqwPinMode();
+     void writeSqwPinMode(Ds1307SqwPinMode mode);
     uint8_t readnvram(uint8_t address);
     void readnvram(uint8_t* buf, uint8_t size, uint8_t address);
     void writenvram(uint8_t address, uint8_t data);

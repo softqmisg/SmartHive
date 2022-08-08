@@ -29,7 +29,7 @@ _FreqCountESP::_FreqCountESP()
 
 _FreqCountESP::~_FreqCountESP()
 {
-  end();
+  stop();
 }
 
 void _FreqCountESP::begin(uint8_t pin, uint16_t timerMs, uint8_t hwTimerId, uint8_t mode)
@@ -42,14 +42,30 @@ void _FreqCountESP::begin(uint8_t pin, uint16_t timerMs, uint8_t hwTimerId, uint
 
   pinMode(mPin, mode);
 
-  attachInterrupt(mPin, &onFreqIORise, RISING);
+//  attachInterrupt(mPin, &onFreqIORise, RISING);
 
   mTimer = timerBegin(hwTimerId, 80, true);
-  timerAttachInterrupt(mTimer, &onFreqTimer, true);
   timerAlarmWrite(mTimer, mTimerMs * 1000, true);
-  timerAlarmEnable(mTimer);
-}
+  //timerAttachInterrupt(mTimer, &onFreqTimer, true);
+  //timerAlarmEnable(mTimer);
 
+}
+void _FreqCountESP::start()
+{
+  attachInterrupt(mPin, &onFreqIORise, RISING);
+  timerAttachInterrupt(mTimer, &onFreqTimer, true);
+  timerStart(mTimer);
+  timerAlarmEnable(mTimer);
+ 
+}
+void _FreqCountESP::stop()
+{
+  detachInterrupt(mPin);
+
+  timerAlarmDisable(mTimer);
+  timerDetachInterrupt(mTimer);
+  timerEnd(mTimer);
+}
 uint32_t _FreqCountESP::read()
 {
   sIsFrequencyReady = false;
@@ -61,13 +77,6 @@ uint8_t _FreqCountESP::available()
   return sIsFrequencyReady;
 }
 
-void _FreqCountESP::end()
-{
-  detachInterrupt(mPin);
 
-  timerAlarmDisable(mTimer);
-  timerDetachInterrupt(mTimer);
-  timerEnd(mTimer);
-}
 
 _FreqCountESP FreqCountESP;

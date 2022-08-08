@@ -26,7 +26,8 @@ public:
   void begin(uint8_t pin, uint16_t timerMs, uint8_t hwTimerId = 0, uint8_t mode = INPUT);
   uint32_t read();
   uint8_t available();
-  void end();
+  void start();
+  void stop();
 };
 
 extern _FreqCountESP FreqCountESP;
