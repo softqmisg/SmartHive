@@ -105,6 +105,10 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=HYEKNXIY
 
+[GeneratedDocument1]
+DocumentPath=Project Outputs for SmartHive_Client\Design Rule Check - SmartHive_Client.html
+DItemRevisionGUID=
+
 [Configuration1]
 Name=Sources
 ParameterCount=0
