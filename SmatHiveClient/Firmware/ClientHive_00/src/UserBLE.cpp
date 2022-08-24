@@ -141,5 +141,58 @@ void bleNotifyInitializeData()
     readonlyCharactristics[READONLY_DoorState].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_DoorState].notify();
 
+    strTemp=(hive.getHiveWeightState())?String(hive.readWeight()):"---";
+    readonlyCharactristics[READONLY_HiveWeight].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_HiveWeight].notify();
+
+    int level=hive.getHiveFeedingLevel();
+    if(level==0)
+    {
+        strTemp="Empty";
+    }else if(level==1){
+        strTemp="Half";
+    }
+    else{
+        strTemp="Full";
+    }    
+    readonlyCharactristics[READONLY_LevelFeeding].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_LevelFeeding].notify();
+
+    strTemp=String(hive.getHeaterAverageCurrent());
+    readonlyCharactristics[READONLY_AverageCurrent].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_AverageCurrent].notify();
+
+    strTemp=(hive.getFanStatus()?"OK":"FAIL");
+    readonlyCharactristics[READONLY_FanStatus].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_FanStatus].notify();
+
+    strTemp=(hive.getPumpStatus()?"ON":"OFF");
+    readonlyCharactristics[READONLY_PumpStatus].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_PumpStatus].notify();
+
+    strTemp=(hive.sht20Inside.isConnected()?"OK":"FAIL");
+    readonlyCharactristics[READONLY_InsideSensor].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_InsideSensor].notify();
+
+    strTemp=(hive.sht20Outside.isConnected()?"OK":"FAIL");
+    readonlyCharactristics[READONLY_OutsideSensor].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_OutsideSensor].notify();
+
+    strTemp=(hive.getDiurnalStatus()==DAY ?"DAY":"NIGHT");
+    readonlyCharactristics[READONLY_HiveDiurnal].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_HiveDiurnal].notify();
+
+    strTemp=(hive.getDiurnalStatus()==DAY ?"DAY":"NIGHT");
+    readonlyCharactristics[READONLY_HiveDiurnal].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_HiveDiurnal].notify();
+
+    strTemp=hive.getRTCStatus()?"Adjust":"Correct";
+    readonlyCharactristics[READONLY_RTCStatus].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_RTCStatus].notify();
+
+    strTemp=(hive.getHiveState()==NORMAL?"NORMAL":"EMERGENCY");
+    readonlyCharactristics[READONLY_HiveState].setValue(strTemp.c_str());
+    readonlyCharactristics[READONLY_HiveState].notify();
+
     Serial.println(">>>>Initialize Notify");
 }

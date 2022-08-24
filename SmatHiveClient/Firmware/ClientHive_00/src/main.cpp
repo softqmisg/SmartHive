@@ -114,15 +114,15 @@ void loop()
     ledcWrite(FANPWMCHANNEL, 255-led_brightness); // max duty=2^bits
 
     Serial.println("Brightness:" + String(led_brightness));
-    hive.FreqCountESP.start();
-    if (hive.FreqCountESP.available())
-    {
-      hive.FreqCountESP.stop();
-      uint32_t freq_r = hive.FreqCountESP.read();
-      Serial.println("Ext PWM Freq:" + String(freq_r));
-      double cap = 1.44 / (3 * freq_r) * 1e6 - 11.66;
-      Serial.println("cap(pf):" + String(cap));
-    }
+    // hive.FreqCountESP.start();
+    // if (hive.FreqCountESP.available())
+    // {
+    //   hive.FreqCountESP.stop();
+    //   uint32_t freq_r = hive.FreqCountESP.read();
+    //   Serial.println("Ext PWM Freq:" + String(freq_r));
+    //   double cap = 1.44 / (3 * freq_r) * 1e6 - 11.66;
+    //   Serial.println("cap(pf):" + String(cap));
+    // }
     if (hive.rtcext.isrunning())
     {
       DateTime now = hive.rtcext.now();

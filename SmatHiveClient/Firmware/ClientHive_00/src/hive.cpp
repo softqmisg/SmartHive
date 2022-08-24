@@ -131,8 +131,10 @@ void Hive::begin(void)
     // }
     ////////////////////////////
     heaterInput = sht20Inside.getTemperature();
+    heaterSetpoint=37.0;
     heater.SetSampleTime(1000);
     heater.SetMode(AUTOMATIC);
+
     /////////////////////////////
     FreqCountESP.begin(ESP32_GPIO2_WATERLEVEL, 1000, 1); // frequncy input
 }

@@ -149,14 +149,96 @@ class readonlyCharactristicCallbacks:public BLECharacteristicCallbacks{
         }        
         if(pCharactristic->getUUID().equals(TEMP_INSIDE_UUID))
         {
-            int temp=3970;
-            pCharactristic->setValue(temp);
+            String strTemp=String(hive.sht20Inside.getTemperature());
+            pCharactristic->setValue(strTemp.c_str());
         }
+        if(pCharactristic->getUUID().equals(HUM_INSIDE_UUID))
+        {
+            String strTemp=String(hive.sht20Inside.getHumidity());
+            pCharactristic->setValue(strTemp.c_str());
+        }   
+        if(pCharactristic->getUUID().equals(TEMP_OUTSIDE_UUID))
+        {
+            String strTemp=String(hive.sht20Outside.getTemperature());
+            pCharactristic->setValue(strTemp.c_str());
+        }
+        if(pCharactristic->getUUID().equals(HUM_OUTSIDE_UUID))
+        {
+            String strTemp=String(hive.sht20Outside.getHumidity());
+            pCharactristic->setValue(strTemp.c_str());
+        }  
+        if(pCharactristic->getUUID().equals(LIGHTNESS_UUID))
+        {
+            String strTemp=String(hive.readPhotoCell());
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(DOOR_STATE_UUID))
+        {
+            String strTemp=(hive.readDoorState())?"open":"close";
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(HIVE_WEIGHT_UUID))
+        {
+            String strTemp=(hive.getHiveWeightState())?String(hive.readWeight()):"---";
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(HIVE_FEEDING_LEVEL))
+        {
+            String strTemp;
+            int level=hive.getHiveFeedingLevel();
+            if(level==0)
+            {
+              strTemp="Empty";
+            }else if(level==1){
+              strTemp="Half";
+            }
+            else{
+              strTemp="Full";
+            }
+
+            pCharactristic->setValue(strTemp.c_str());
+        }                                 
+        if(pCharactristic->getUUID().equals(AVERAGE_CURRENT_UUID))
+        {
+            String strTemp=String(hive.getHeaterAverageCurrent());
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(FAN_STATUS_UUID))
+        {
+            String strTemp=(hive.getFanStatus()?"OK":"FAIL");
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+
+        if(pCharactristic->getUUID().equals(PUMP_STATUS_UUID))
+        {
+            String strTemp=(hive.getPumpStatus()?"ON":"OFF");
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(SENSOR_INSIDE_UUID))
+        {
+            String strTemp=(hive.sht20Inside.isConnected()?"OK":"FAIL");
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(SENSOR_OUTSIDE_UUID))
+        {
+            String strTemp=(hive.sht20Outside.isConnected()?"OK":"FAIL");
+            pCharactristic->setValue(strTemp.c_str());
+        } 
+        if(pCharactristic->getUUID().equals(HIVE_DIURNAL_UUID))
+        {
+            String strTemp=(hive.getDiurnalStatus()==DAY ?"DAY":"NIGHT");
+            pCharactristic->setValue(strTemp.c_str());
+        }                 
         if(pCharactristic->getUUID().equals(RTC_STATUS_UUID))
         {
-            uint8_t temp=(uint8_t)hive.getRTCStatus();
-           pCharactristic->setValue(&temp,sizeof(temp));
+            String strTemp=hive.getRTCStatus()?"Adjust":"Correct";
+           pCharactristic->setValue(strTemp.c_str());
         }
+        if(pCharactristic->getUUID().equals(HIVE_STATE_UUID))
+        {
+            String strTemp=(hive.getHiveState()==NORMAL?"NORMAL":"EMERGENCY");
+            pCharactristic->setValue(strTemp.c_str());
+        }         
     };
 };
 
