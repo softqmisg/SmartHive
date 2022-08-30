@@ -12,6 +12,8 @@
 #include <SD.h>
 #include <SPI.h>
 #include "FreqCountESP.h"
+#include "position.h"
+#include "EEPROM.h"
 
 #define DS1307_NVRAM_CHECK_BAT 2
 #define SDCARDSPEED 5000000
@@ -47,6 +49,8 @@ private:
     bool pump_status=false;
     _diurnal_t diurnal_status=DAY;
     _state_t  hive_state=NORMAL;
+    String bleServerName="SmartHive1";
+    Position hiveposition;
 public:
     SHT2x sht20Inside;
     SHT2x sht20Outside;
@@ -56,10 +60,15 @@ public:
 
     enum {StateDay,StateNight} hiveDiurnalState;
     enum {EmergencyState,NormalState} hiveOperationalState;
-    Hive(double _kp = 2, double _ki = 5, double _kd = 1) : rtcint(0),
+    Hive(double _kp = 2, double _ki = 5, double _kd = 1) : rtcint(0),hiveposition(36.809982,54.448833),
                        heater(&heaterInput, &heaterOutput, &heaterSetpoint, _kp, _ki, _kd, DIRECT){};
     ~Hive(){};
     void begin(void);
+    void sethivePosition(position_t pos) { hiveposition.setPosition(pos);};
+    void sethivePosition(double lat,double lng) { hiveposition.setPosition(lat,lng);};
+    position_t gethivePosition() {return hiveposition.getPosition();};
+    String gethiveName(){return bleServerName;};
+    void sethiveName(String name){bleServerName=name;};
     float getInsideTemperature(){ return sht20Inside.getTemperature();};
     float getInsideHumidity(){ return sht20Inside.getHumidity();};
     float getOutsideTemperature(){ return sht20Outside.getTemperature();};

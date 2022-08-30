@@ -24,4 +24,10 @@
     #define ESP32_GPIO35_HX711_DT           35
     #define ESP32_GPIO36_THERMALFEEDBACK    36
     #define ESP32_GPIO39_PHOTOCELL          39
+
+
+    #define EE_ADD_HIVE_NAME    0
+    #define EE_SZ_HIVE_NAME     15
+    
+    #define EE_ADD_HIVE_LAT
 #endif 

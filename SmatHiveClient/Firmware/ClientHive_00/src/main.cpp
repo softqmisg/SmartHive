@@ -97,6 +97,7 @@ void loop()
     portEXIT_CRITICAL(&timer0Mux);
     if (hive.isDeviceConnected())
     {
+      //
       bleNotifyInitializeData();
 
       if (sendInitValuesToClient == false)
@@ -110,8 +111,8 @@ void loop()
     }
 
     led_brightness += 10;
-    ledcWrite(LEDPWMCHANNEL, led_brightness); // max duty=2^bits
-    ledcWrite(FANPWMCHANNEL, 255-led_brightness); // max duty=2^bits
+    ledcWrite(LEDPWMCHANNEL, led_brightness);       // max duty=2^bits
+    ledcWrite(FANPWMCHANNEL, 255 - led_brightness); // max duty=2^bits
 
     Serial.println("Brightness:" + String(led_brightness));
     // hive.FreqCountESP.start();

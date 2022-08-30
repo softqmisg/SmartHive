@@ -1,8 +1,36 @@
 #include "UserBLE.h"
 BLEServer *hiveServer;
-BLEService *ReadWriteService;
+BLEService *readwriteService;
 BLEService *readonlyService;
-BLECharacteristic readonlyCharactristics[READONLY_CHARCHTRISTIC_NUMBER] = {
+BLEAdvertising *hiveAdvertising;
+/**
+ * @brief readwrite Charactristics and Descriptions
+ * 
+ */
+BLECharacteristic readwriteCharactristics[READWRITE_CHARACTRISTIC_NUMBER]={
+    BLECharacteristic(POSITION_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),
+    BLECharacteristic(DEVICE_NAME_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),
+    BLECharacteristic(TIME_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),
+    BLECharacteristic(DATE_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),
+    BLECharacteristic(BLE_PASSWORD_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),
+    BLECharacteristic(PID_COEFF_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),    
+    BLECharacteristic(LIGHT_LEVEL_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_READ),
+};
+BLEDescriptor *readwriteDescriptors[READWRITE_CHARACTRISTIC_NUMBER];
+String readwriteDescriptorsValue[READWRITE_CHARACTRISTIC_NUMBER]={
+    "Hive Position",
+    "Hive Name",
+    "Hive Time",
+    "Hive Date",
+    "BLE Pair Password",
+    "Hive PID Coeff",
+    "Light Level",
+};
+/**
+ * @brief readonly Charactristics and Descriptions
+ * 
+ */
+BLECharacteristic readonlyCharactristics[READONLY_CHARACTRISTIC_NUMBER] = {
     BLECharacteristic(SERIAL_NUMBER_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),                       // Serial Number String
     BLECharacteristic(SOFTWARE_VERSION_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),                       // Software Version String
     BLECharacteristic(HARDWARE_VERSION_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),                       // Hardware Version String
@@ -22,8 +50,10 @@ BLECharacteristic readonlyCharactristics[READONLY_CHARCHTRISTIC_NUMBER] = {
     BLECharacteristic(HIVE_DIURNAL_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ), // Hive Diurnal Cycle Day/night
     BLECharacteristic(RTC_STATUS_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ), // Hive Diurnal Cycle Day/night
     BLECharacteristic(HIVE_STATE_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ), // Hive Operational State
+
 };
-String readonlyDesciptorsValue[READONLY_CHARCHTRISTIC_NUMBER]={
+BLEDescriptor *readonlyDescriptors[READONLY_CHARACTRISTIC_NUMBER];
+String readonlyDescriptorsValue[READONLY_CHARACTRISTIC_NUMBER]={
     "Serial number",
     "Software Version",
     "Hardware Version",
@@ -35,7 +65,7 @@ String readonlyDesciptorsValue[READONLY_CHARCHTRISTIC_NUMBER]={
     "Hive Door State",
     "Hive's Weight",
     "Level of bee feeding",
-    "Average current of heater",
+    "Heater Average current",
     "Fan Status",
     "Pump Status",
     "Inside Sensor Status",
@@ -44,31 +74,24 @@ String readonlyDesciptorsValue[READONLY_CHARCHTRISTIC_NUMBER]={
     "RTC Status",
     "Hive State",
 };
-BLEDescriptor readonlyDesciptors[READONLY_CHARCHTRISTIC_NUMBER] = {
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903)),
-    BLEDescriptor(BLEUUID((uint16_t)0x2903))
-    };
 
 void bleInit()
 {
-    BLEDevice::init(bleServerName);
+    for(uint8_t i=0;i<READWRITE_CHARACTRISTIC_NUMBER;i++)
+    {
+        readwriteDescriptors[i]=new BLEDescriptor(BLEUUID((uint16_t)0x2903));
+        readwriteDescriptors[i]->setValue(readwriteDescriptorsValue[i].c_str());
+    }
+
+    for(uint8_t i=0;i<READONLY_CHARACTRISTIC_NUMBER;i++)
+    {
+        readonlyDescriptors[i]=new BLEDescriptor(BLEUUID((uint16_t)0x2903));
+        readonlyDescriptors[i]->setValue(readonlyDescriptorsValue[i].c_str());
+    }
+    //Init Device BLE and Security
+    BLEDevice::init(hive.gethiveName().c_str());
+    BLEDevice::setMTU(517);
+#if ENABLE_PAIR_ENCRYPTION
     BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
     BLEDevice::setSecurityCallbacks(new hiveSecurityCallbacks());
     BLESecurity *pSecurity = new BLESecurity();
@@ -76,25 +99,51 @@ void bleInit()
     pSecurity->setAuthenticationMode(ESP_LE_AUTH_NO_BOND);
     pSecurity->setCapability(ESP_IO_CAP_OUT);
     pSecurity->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
-
+#endif
+    
+    //Create Server
     hiveServer = BLEDevice::createServer();
     hiveServer->setCallbacks(new hiveServerCallbacks());
+    //Create Service ReadWrite
+    readwriteService=hiveServer->createService(READWRITE_SERVICE_UUID,READWRITE_CHARACTRISTIC_NUMBER*3+1);
+    for (uint8_t i = 0; i < READWRITE_CHARACTRISTIC_NUMBER; i++)
+    {
+        readwriteService->addCharacteristic(&readwriteCharactristics[i]);
+#if ENABLE_PAIR_ENCRYPTION
+        readwriteCharactristics[i].setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+#endif
+        readwriteCharactristics[i].setCallbacks(new readwriteCharactristicCallbacks());
 
-    readonlyService = hiveServer->createService(READONLY_SERVICE_UUID, READONLY_CHARCHTRISTIC_NUMBER * 3 + 1);
-    for (uint8_t i = 0; i < READONLY_CHARCHTRISTIC_NUMBER; i++)
+        // Serial.println(readonlyDescriptorsValue[i].c_str());
+#if ENABLE_PAIR_ENCRYPTION
+        readwriteDescriptors[i].setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+#endif
+        readwriteCharactristics[i].addDescriptor(readwriteDescriptors[i]);
+    }
+
+    //Create Service ReadOnly and charctristics
+    //numHandles = (# of Characteristics)*2 + (# of Services) + (# of Characteristics with BLE2902)
+    readonlyService = hiveServer->createService(READONLY_SERVICE_UUID, READONLY_CHARACTRISTIC_NUMBER * 3 + 1);
+    for (uint8_t i = 0; i < READONLY_CHARACTRISTIC_NUMBER; i++)
     {
         readonlyService->addCharacteristic(&readonlyCharactristics[i]);
+#if ENABLE_PAIR_ENCRYPTION
         readonlyCharactristics[i].setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+#endif
         readonlyCharactristics[i].setCallbacks(new readonlyCharactristicCallbacks());
 
-        readonlyDesciptors[i].setValue(readonlyDesciptorsValue[i].c_str());
-        // Serial.println(readonlyDesciptorsValue[i].c_str());
-        readonlyDesciptors[i].setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
-        readonlyCharactristics[i].addDescriptor(&readonlyDesciptors[i]);
+        // Serial.println(readonlyDescriptorsValue[i].c_str());
+#if ENABLE_PAIR_ENCRYPTION
+        readonlyDescriptors[i].setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
+#endif
+        readonlyCharactristics[i].addDescriptor(readonlyDescriptors[i]);
     }
+    ///Start Services
+    readwriteService->start();
     readonlyService->start();
-
-    BLEAdvertising *hiveAdvertising = BLEDevice::getAdvertising();
+    //advertising the services
+    hiveAdvertising = BLEDevice::getAdvertising();
+    hiveAdvertising->addServiceUUID(READWRITE_SERVICE_UUID);
     hiveAdvertising->addServiceUUID(READONLY_SERVICE_UUID);
     hiveAdvertising->setScanResponse(true);
     hiveAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
@@ -117,19 +166,20 @@ void bleNotifyInitializeData()
     readonlyCharactristics[READONLY_Hardwareversion].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_Hardwareversion].notify();
 
-    strTemp=String(hive.sht20Inside.getTemperature());
+    strTemp=hive.sht20Inside.isConnected()?String(hive.sht20Inside.getTemperature()):"---";
     readonlyCharactristics[READONLY_InsideTemperature].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_InsideTemperature].notify();
 
-    strTemp=String(hive.sht20Inside.getHumidity());
+    strTemp=hive.sht20Inside.isConnected()?String(hive.sht20Inside.getHumidity()):"---";
     readonlyCharactristics[READONLY_InsideHumidity].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_InsideHumidity].notify();
 
-    strTemp=String(hive.sht20Outside.getTemperature());
+
+    strTemp=hive.sht20Outside.isConnected()?String(hive.sht20Outside.getTemperature()):"---";
     readonlyCharactristics[READONLY_OutsideTemperature].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_OutsideTemperature].notify();
 
-    strTemp=String(hive.sht20Outside.getHumidity());
+    strTemp=hive.sht20Outside.isConnected()?String(hive.sht20Outside.getHumidity()):"---";
     readonlyCharactristics[READONLY_OutsideHumidity].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_OutsideHumidity].notify();
 
@@ -182,11 +232,7 @@ void bleNotifyInitializeData()
     readonlyCharactristics[READONLY_HiveDiurnal].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_HiveDiurnal].notify();
 
-    strTemp=(hive.getDiurnalStatus()==DAY ?"DAY":"NIGHT");
-    readonlyCharactristics[READONLY_HiveDiurnal].setValue(strTemp.c_str());
-    readonlyCharactristics[READONLY_HiveDiurnal].notify();
-
-    strTemp=hive.getRTCStatus()?"Adjust":"Correct";
+    strTemp=(hive.getRTCStatus()?"Adjust":"Correct");
     readonlyCharactristics[READONLY_RTCStatus].setValue(strTemp.c_str());
     readonlyCharactristics[READONLY_RTCStatus].notify();
 
