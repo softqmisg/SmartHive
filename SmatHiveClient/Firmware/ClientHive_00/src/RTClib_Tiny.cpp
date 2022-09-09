@@ -10,7 +10,6 @@
 #define DS1307_NVRAM    0x08
 #define SECONDS_PER_DAY 86400L
 
-#define SECONDS_FROM_1970_TO_2000 946684800
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -24,7 +23,7 @@ static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
         y -= 2000;
     uint16_t days = d;
     for (uint8_t i = 1; i < m; ++i)
-        days += pgm_read_byte(daysInMonth + i - 1);
+        days += daysInMonth[i - 1];
     if (m > 2 && y % 4 == 0)
         ++days;
     return days + 365 * y + (y + 3) / 4 - 1;
@@ -55,7 +54,7 @@ DateTime::DateTime (uint32_t t) {
         days -= 365 + leap;
     }
     for (m = 1; ; ++m) {
-        uint8_t daysPerMonth = pgm_read_byte(daysInMonth + m - 1);
+        uint8_t daysPerMonth = daysInMonth[ m - 1];
         if (leap && m == 2)
             ++daysPerMonth;
         if (days < daysPerMonth)

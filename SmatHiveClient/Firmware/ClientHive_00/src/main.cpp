@@ -8,6 +8,7 @@
 #include "main.h"
 #include "hive.h"
 #include "UserBLE.h"
+#include "math.h"
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
@@ -16,7 +17,7 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #endif
 
 uint8_t led_brightness = 0;
-Hive hive(2, 5, 1);
+Hive hive;
 bool sendInitValuesToClient = false;
 ///////////////////////////////////////////////////////////////////
 hw_timer_t *timer0_1s = NULL;
@@ -45,8 +46,42 @@ void setup()
   Serial.println("Chip Free Sketch Space:" + String(ESP.getFreeSketchSpace()));
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
+  // ////////////////////////////////////////
+  //   ledcSetup(FANPWMCHANNEL, 1000, 8);
+  //   ledcAttachPin(ESP32_GPIO18_FAN, FANPWMCHANNEL); // pwm
+  //   //digitalWrite(ESP32_GPIO18_FAN,LOW);
+  //    ledcWrite(FANPWMCHANNEL, 256 - 0);
+  // Serial.println(__DATE__);
+  // Serial.println(__TIME__);
+  // DateTime now(__DATE__,__TIME__);
+  // Serial.println(now.year());
+  // Serial.println(now.unixtime());
+  // Position pos(35.7,51.42);
+  // unsigned long prev=millis();
+  // pos.calculateSun(DateTime(2022,9,9,0,0,0));
+  // unsigned long next=millis();
+  // Serial.println(next-prev);
 
-  /////////////////////
+  // DateTime sun=pos.getSunrise();
+  // Serial.println(
+  //   String(sun.hour())+":"+
+  //   String(sun.minute())+":"+
+  //   String(sun.second())
+  // );
+  // sun=pos.getSunset();
+  // Serial.println(
+  //   String(sun.hour())+":"+
+  //   String(sun.minute())+":"+
+  //   String(sun.second())
+  // );  
+  // sun=pos.getNoon();
+  // Serial.println(
+  //   String(sun.hour())+":"+
+  //   String(sun.minute())+":"+
+  //   String(sun.second())
+  // );    
+  // while(1);
+  // /////////////////////
   hive.begin();
   ////////////////////
   // SerialBT.begin("SmartHive");
@@ -77,6 +112,15 @@ void setup()
   // ///////////////////
 
   ledcWrite(2, led_brightness); // max duty=2^bits
+
+  ////////////////////////////////
+  Serial.println(hive.gethiveName());
+  Serial.println(hive.getPosition().latitude,6);
+  Serial.println(hive.getPosition().longitude,6);
+  Serial.println(hive.getblepassword());
+  Serial.println(hive.getLight().level);
+  Serial.println(hive.getLight().hysteresis);
+  
 }
 uint8_t state = 1;
 void loop()
@@ -95,14 +139,14 @@ void loop()
     portENTER_CRITICAL(&timer0Mux);
     timer0_f = false;
     portEXIT_CRITICAL(&timer0Mux);
+    hive.update();
+
     if (hive.isDeviceConnected())
     {
-      //
-      bleNotifyInitializeData();
-
       if (sendInitValuesToClient == false)
       {
         sendInitValuesToClient = true;
+        bleNotify(READONLY_CHARACTRISTIC_NUMBER);
       }
     }
     else
@@ -110,67 +154,51 @@ void loop()
       sendInitValuesToClient = false;
     }
 
+
     led_brightness += 10;
     ledcWrite(LEDPWMCHANNEL, led_brightness);       // max duty=2^bits
-    ledcWrite(FANPWMCHANNEL, 255 - led_brightness); // max duty=2^bits
 
-    Serial.println("Brightness:" + String(led_brightness));
-    // hive.FreqCountESP.start();
-    // if (hive.FreqCountESP.available())
-    // {
-    //   hive.FreqCountESP.stop();
-    //   uint32_t freq_r = hive.FreqCountESP.read();
-    //   Serial.println("Ext PWM Freq:" + String(freq_r));
-    //   double cap = 1.44 / (3 * freq_r) * 1e6 - 11.66;
-    //   Serial.println("cap(pf):" + String(cap));
-    // }
-    if (hive.rtcext.isrunning())
-    {
-      DateTime now = hive.rtcext.now();
-      Serial.print(now.year(), DEC);
-      Serial.print('/');
-      Serial.print(now.month(), DEC);
-      Serial.print('/');
-      Serial.print(now.day(), DEC);
-      Serial.print(" (");
-      Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
-      Serial.print(") ");
-      Serial.print(now.hour(), DEC);
-      Serial.print(':');
-      Serial.print(now.minute(), DEC);
-      Serial.print(':');
-      Serial.print(now.second(), DEC);
-      Serial.println();
-    }
-    if (hive.sht20Inside.isConnected())
-    {
-      hive.sht20Inside.read();
-      Serial.print("SHT inside:");
-      Serial.print(hive.sht20Inside.getTemperature(), 1);
-      Serial.print(",");
-      Serial.println(hive.sht20Inside.getHumidity(), 1);
-      // decision on inside temperature && humidity
-      hive.controlHeater();
-    }
-    else
-    {
-      Serial.println("SHT inside disconnected");
-      // decision about PID:
-      //  do something ....
-    }
-    if (hive.sht20Outside.isConnected())
-    {
-      hive.sht20Outside.read();
-
-      Serial.print("SHT Outside:");
-      Serial.print(hive.sht20Outside.getTemperature(), 1);
-      Serial.print(",");
-      Serial.println(hive.sht20Outside.getHumidity(), 1);
-    }
-    else
-    {
-      Serial.println("SHT outside disconnected");
-    }
-    Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+  //   Serial.println("Brightness:" + String(led_brightness));
+  //   if (hive.rtcext.isrunning())
+  //   {
+  //     DateTime now = hive.rtcext.now();
+  //     Serial.print(now.year(), DEC);
+  //     Serial.print('/');
+  //     Serial.print(now.month(), DEC);
+  //     Serial.print('/');
+  //     Serial.print(now.day(), DEC);
+  //     Serial.print(" (");
+  //     Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
+  //     Serial.print(") ");
+  //     Serial.print(now.hour(), DEC);
+  //     Serial.print(':');
+  //     Serial.print(now.minute(), DEC);
+  //     Serial.print(':');
+  //     Serial.print(now.second(), DEC);
+  //     Serial.println();
+  //   }
+  //   if (hive.sht20Inside.isConnected())
+  //   {
+  //     Serial.print("SHT inside:");
+  //     Serial.print(hive.getInsideTemperature(), 1);
+  //     Serial.print(",");
+  //     Serial.println(hive.getInsideHumidity(), 0);
+  //   }
+  //   else
+  //   {
+  //     Serial.println("SHT inside disconnected");
+  //   }
+  //   if (hive.sht20Outside.isConnected())
+  //   {
+  //     Serial.print("SHT Outside:");
+  //     Serial.print(hive.getOutsideTemperature(), 1);
+  //     Serial.print(",");
+  //     Serial.println(hive.getOutsideHumidity(), 0);
+  //   }
+  //   else
+  //   {
+  //     Serial.println("SHT outside disconnected");
+  //   }
+  //   Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
   }
 }

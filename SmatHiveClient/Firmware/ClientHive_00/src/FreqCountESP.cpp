@@ -56,7 +56,6 @@ void _FreqCountESP::start()
   timerAttachInterrupt(mTimer, &onFreqTimer, true);
   timerStart(mTimer);
   timerAlarmEnable(mTimer);
- 
 }
 void _FreqCountESP::stop()
 {

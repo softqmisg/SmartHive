@@ -6,14 +6,12 @@
 #define _RTCLIB_H_
 #include "SoftWire.h"
 #include "AsyncDelay.h"
-
-// extern AsyncDelay readInterval;
-// extern SoftWire I2C_3;
-// #define WIRENAME I2C_3
-
-
-
 #include <Arduino.h>
+
+
+#define SECONDS_FROM_1970_TO_2000 946684800
+
+
 class TimeSpan;
 
 // Simple general-purpose date/time class (no TZ / DST / leap second handling!)
