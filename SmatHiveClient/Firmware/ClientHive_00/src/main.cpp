@@ -9,6 +9,13 @@
 #include "hive.h"
 #include "UserBLE.h"
 #include "math.h"
+#include "esp_adc_cal.h"
+
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
+#include "ESP32Time.h"
+
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
@@ -30,6 +37,11 @@ void IRAM_ATTR onTimer0()
   portEXIT_CRITICAL_ISR(&timer0Mux);
 }
 
+uint8_t state = 1;
+float Voltage;
+int AN_Pot1_Result;
+uint32_t readADC_Cal(int ADC_Raw);
+
 void setup()
 {
   // put your setup code here, to run once:
@@ -46,42 +58,11 @@ void setup()
   Serial.println("Chip Free Sketch Space:" + String(ESP.getFreeSketchSpace()));
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
-  // ////////////////////////////////////////
-  //   ledcSetup(FANPWMCHANNEL, 1000, 8);
-  //   ledcAttachPin(ESP32_GPIO18_FAN, FANPWMCHANNEL); // pwm
-  //   //digitalWrite(ESP32_GPIO18_FAN,LOW);
-  //    ledcWrite(FANPWMCHANNEL, 256 - 0);
-  // Serial.println(__DATE__);
-  // Serial.println(__TIME__);
-  // DateTime now(__DATE__,__TIME__);
-  // Serial.println(now.year());
-  // Serial.println(now.unixtime());
-  // Position pos(35.7,51.42);
-  // unsigned long prev=millis();
-  // pos.calculateSun(DateTime(2022,9,9,0,0,0));
-  // unsigned long next=millis();
-  // Serial.println(next-prev);
+  //////////////////////////////////////////////
+  // ledcSetup(HEATERPWMCHANNEL, 1000, 8);
+  // ledcAttachPin(ESP32_GPIO19_THERMAL, HEATERPWMCHANNEL); // pwm
 
-  // DateTime sun=pos.getSunrise();
-  // Serial.println(
-  //   String(sun.hour())+":"+
-  //   String(sun.minute())+":"+
-  //   String(sun.second())
-  // );
-  // sun=pos.getSunset();
-  // Serial.println(
-  //   String(sun.hour())+":"+
-  //   String(sun.minute())+":"+
-  //   String(sun.second())
-  // );  
-  // sun=pos.getNoon();
-  // Serial.println(
-  //   String(sun.hour())+":"+
-  //   String(sun.minute())+":"+
-  //   String(sun.second())
-  // );    
-  // while(1);
-  // /////////////////////
+  ////////////////////////////////////////
   hive.begin();
   ////////////////////
   // SerialBT.begin("SmartHive");
@@ -103,7 +84,7 @@ void setup()
     Serial.println(heater_level);
     Serial.println();
   }
-  // /////////////////////////////
+  /////////////////////////////
   // init timer0_1s//
   timer0_1s = timerBegin(0, 80, true); // 80M/80=1Mhz
   timerAttachInterrupt(timer0_1s, &onTimer0, true);
@@ -113,20 +94,28 @@ void setup()
 
   ledcWrite(2, led_brightness); // max duty=2^bits
 
-  ////////////////////////////////
+  //////////////////////////////
   Serial.println(hive.gethiveName());
   Serial.println(hive.getPosition().latitude,6);
   Serial.println(hive.getPosition().longitude,6);
   Serial.println(hive.getblepassword());
   Serial.println(hive.getLight().level);
   Serial.println(hive.getLight().hysteresis);
-  
+
 }
-uint8_t state = 1;
+
 void loop()
 {
   // put your main code here, to run repeatedly:
 
+    // ledcWrite(HEATERPWMCHANNEL,1);
+    // AN_Pot1_Result = analogRead(ESP32_GPIO36_THERMALFEEDBACK);
+    // Voltage = readADC_Cal(AN_Pot1_Result);
+    // Serial.println(AN_Pot1_Result);
+    // Serial.println(Voltage/1000.0); // Print Voltage (in V)
+    // Serial.println(Voltage);      // Print Voltage (in mV)
+    // Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    delay(500);
   if (keypress_f)
   {
     portENTER_CRITICAL_ISR(&keyMux);
@@ -140,7 +129,6 @@ void loop()
     timer0_f = false;
     portEXIT_CRITICAL(&timer0Mux);
     hive.update();
-
     if (hive.isDeviceConnected())
     {
       if (sendInitValuesToClient == false)
@@ -157,48 +145,15 @@ void loop()
 
     led_brightness += 10;
     ledcWrite(LEDPWMCHANNEL, led_brightness);       // max duty=2^bits
+    // Serial.println(hive.rtcint.getTimeDate());
 
-  //   Serial.println("Brightness:" + String(led_brightness));
-  //   if (hive.rtcext.isrunning())
-  //   {
-  //     DateTime now = hive.rtcext.now();
-  //     Serial.print(now.year(), DEC);
-  //     Serial.print('/');
-  //     Serial.print(now.month(), DEC);
-  //     Serial.print('/');
-  //     Serial.print(now.day(), DEC);
-  //     Serial.print(" (");
-  //     Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
-  //     Serial.print(") ");
-  //     Serial.print(now.hour(), DEC);
-  //     Serial.print(':');
-  //     Serial.print(now.minute(), DEC);
-  //     Serial.print(':');
-  //     Serial.print(now.second(), DEC);
-  //     Serial.println();
-  //   }
-  //   if (hive.sht20Inside.isConnected())
-  //   {
-  //     Serial.print("SHT inside:");
-  //     Serial.print(hive.getInsideTemperature(), 1);
-  //     Serial.print(",");
-  //     Serial.println(hive.getInsideHumidity(), 0);
-  //   }
-  //   else
-  //   {
-  //     Serial.println("SHT inside disconnected");
-  //   }
-  //   if (hive.sht20Outside.isConnected())
-  //   {
-  //     Serial.print("SHT Outside:");
-  //     Serial.print(hive.getOutsideTemperature(), 1);
-  //     Serial.print(",");
-  //     Serial.println(hive.getOutsideHumidity(), 0);
-  //   }
-  //   else
-  //   {
-  //     Serial.println("SHT outside disconnected");
-  //   }
-  //   Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
   }
 }
+// uint32_t readADC_Cal(int ADC_Raw)
+// {
+//   esp_adc_cal_characteristics_t adc_chars;
+  
+//   esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
+//   return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
+// }

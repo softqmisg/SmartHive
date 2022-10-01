@@ -21,11 +21,11 @@ const PROG_t DEFAULT_PROG_1={
     .Sunset=TimeSpan(0,0,0,0),
     .minNormalTemperatureDay=17.0,
     .minNormalTemperatureNight=8,
-    .dayTemperatureTarget=20.0,
+    .dayTemperatureTarget=40.0,
     .nightTemperatureTarget=12.0,
     .emergencyTemperatureTarget=12.0,
     .fanOnTemperature=35.0,
-    .fanOnHumidity=60.0,
+    .fanOnHumidity=20.0,
     .fanOnHysteresis=2.0,
     .pumpOnDay=false,
     .pumpOnNight=false,
@@ -129,6 +129,17 @@ void Hive::onReedrelayISR(void)
         sHive->setDoorState(digitalRead(ESP32_GPIO23_REED));
 }
 /**
+ * @brief readadc calib
+ * 
+ */
+uint32_t Hive::readADC_Cal(uint8_t ch)
+{
+  esp_adc_cal_characteristics_t adc_chars;
+  int ADC_Raw=analogRead(ch);
+  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
+  return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
+}
+/**
  * @brief load default values from EEPROM
  *
  */
@@ -194,9 +205,9 @@ void Hive::begin(void)
     ledcSetup(LEDPWMCHANNEL, 1000, 8);
     ledcAttachPin(ESP32_GPIO5_LED0, LEDPWMCHANNEL);            // pwm: freq=80M/2^bits
     pinMode(ESP32_GPIO4_PUMP, OUTPUT);             // gpio
-    pinMode(ESP32_GPIO39_PHOTOCELL, ANALOG);       // analog input
-    pinMode(ESP32_GPIO33_FANFEEDBACK, ANALOG);     // analog input
-    pinMode(ESP32_GPIO36_THERMALFEEDBACK, ANALOG); // analog input
+    // pinMode(ESP32_GPIO39_PHOTOCELL, ANALOG);       // analog input
+    // pinMode(ESP32_GPIO33_FANFEEDBACK, ANALOG);     // analog input
+    // pinMode(ESP32_GPIO36_THERMALFEEDBACK, ANALOG); // analog input
     pinMode(ESP32_GPIO23_REED, INPUT);             // intterupt input
     attachInterrupt(digitalPinToInterrupt(ESP32_GPIO23_REED), Hive::onReedrelayISR, CHANGE);
     pinMode(ESP32_GPIO15_KEYDOWN, INPUT); // interrupt input
@@ -227,62 +238,37 @@ void Hive::begin(void)
     if (rtcext.readnvram(DS1307_NVRAM_CHECK_BAT) != 0xAA)
     {
         rtcext.writenvram(DS1307_NVRAM_CHECK_BAT, 0xAA);
-
         rtcext.adjust(BUILD_DATETIME);
         rtcneedAdjust = true;
         Serial.println("Write new nvram ds1307 ");
         Serial.println(String(BUILD_DATETIME.year())+"-"+
                         String(BUILD_DATETIME.month())+"-"+
-                        String(BUILD_DATETIME.day())+" "+
+                        String(BUILD_DATETIME.day())+","+
                         String(BUILD_DATETIME.hour())+":"+
                         String(BUILD_DATETIME.minute())+":"+
-                        String(BUILD_DATETIME.second())
-        );
+                        String(BUILD_DATETIME.second()));
+        DateTime tt=rtcext.now();
+        Serial.println(tt.year());
+        Serial.println(tt.month());
+        Serial.println(tt.day());
+        Serial.println(tt.hour());
+        Serial.println(tt.minute());
+        Serial.println(tt.second());
+
     }
     else
     {
         rtcneedAdjust = false;
         Serial.println("Read nvram ds1307 was ok");
     }
-    rtcint.setTime(rtcext.now().unixtime());
     // /////////////////////////////////
-    // // init SDCARD
-    // SPIClass spi(HSPI);
-    // spi.begin(ESP32_GPIO14_SDSCK, ESP32_GPIO12_SDMISO, ESP32_GPIO13_SDMOSI, ESP32_GPIO26_SDCS);
-    // if (!SD.begin(ESP32_GPIO26_SDCS, spi, SDCARDSPEED))
-    // {
-    //     Serial.println("Card Mount Failed");
-    // }
-    // uint8_t cardType = SD.cardType();
-    // if (cardType == CARD_NONE)
-    // {
-    //     Serial.println("No SD card attached");
-    // }
-    // else
-    // {
-    //     Serial.print("SD Card Type: ");
-    //     if (cardType == CARD_MMC)
-    //     {
-    //         Serial.println("MMC");
-    //     }
-    //     else if (cardType == CARD_SD)
-    //     {
-    //         Serial.println("SDSC");
-    //     }
-    //     else if (cardType == CARD_SDHC)
-    //     {
-    //         Serial.println("SDHC");
-    //     }
-    //     else
-    //     {
-    //         Serial.println("UNKNOWN");
-    //     }
-    //     uint64_t cardSize = SD.cardSize() / (1024 * 1024);
-    //     Serial.printf("SD Card Size: %lluMB\n", cardSize);
-    // }
+    rtcint.setTime(rtcext.now().unixtime());
+    ////////////////////////////////
+    logg.begin(&rtcint);
     ////////////////////////////
     heaterInput = sht20Inside.getTemperature();
-    heaterSetpoint = 37.0;
+    if(progs[0].active)
+        setInsideTemperature(progs[0].dayTemperatureTarget);
     heater.SetSampleTime(1000);
     heater.SetMode(AUTOMATIC);
 
@@ -307,7 +293,7 @@ void Hive::update(void)
         feeding_level=FULL;
     //read adcs
     avg_heater_cnt++;
-    heater_current=(float)analogRead(ESP32_GPIO36_THERMALFEEDBACK)*33.0/1024;
+    heater_current=(float)readADC_Cal(ESP32_GPIO36_THERMALFEEDBACK)*10.0;
     sum_heater_current+=heater_current;
     if(avg_heater_cnt==3600)
     {
@@ -315,8 +301,8 @@ void Hive::update(void)
         sum_heater_current=0;
         avg_heater_cnt=0;
     }
-
-    fan_current=analogRead(ESP32_GPIO33_FANFEEDBACK)*33.0/1024.0;
+    setFan(255);
+    fan_current=readADC_Cal(ESP32_GPIO33_FANFEEDBACK)*10.0;
 
     //read sht20s
     if(sht20Inside.isConnected())
@@ -375,6 +361,23 @@ void Hive::update(void)
     if(getHiveState()==HIVEAUTO)
     {
       controlHeater();
+      float temp_t=getInsideTemperature(),temp_h=getInsideHumidity();
+      if(temp_h>progs[0].fanOnHumidity )
+      {
+        setFan(255);
+      }
+      else if(temp_h< progs[0].fanOnHumidity-progs[0].fanOnHysteresis)
+      {
+        setFan(0);
+      }
+      if(temp_t>progs[0].fanOnTemperature )
+      {
+        setFan(255);
+      }
+      else if(temp_t< progs[0].fanOnTemperature-progs[0].fanOnHysteresis)
+      {
+        setFan(0);
+      }      
     }
     else if(getHiveState()==HIVESTERIL)
     {
@@ -391,11 +394,40 @@ void Hive::update(void)
         setPumpStatus(false);
     }
 
+    ////logging datas
+    tik_counter++;
+    if(tik_counter>=1*20)
+    {
+        tik_counter=0;
+        String format=rtcint.getTime("%F") +"\n"+
+                    rtcint.getTime("%T") +"\n"+        
+                      "h cur:"+String(getHeaterCurrent())+"\n"+
+                      "h avg cur:"+String(getHeaterAverageCurrent())+"\n"+
+                      " h percent:"+String(getHeater())+"\n"+
+                      " pid output:"+String(heaterOutput)+"\n"+
+                      "pid setpoint:"+String(heaterSetpoint)+"\n"+
+                      "in temp:"+String(getInsideTemperature())+"\n"+
+                      "in hum:"+String(getInsideHumidity())+"\n"+
+                      "fan cur:"+String(fan_current);
+        Serial.println(format);
+        Serial.println("================================");
+        format=rtcint.getTime("%F")+","+
+               rtcint.getTime("%T")+","+
+                      String(getHeaterCurrent())+","+
+                      String(getHeaterAverageCurrent())+","+
+                      String(getHeater())+","+
+                      String(heaterOutput)+","+
+                      String(heaterSetpoint)+","+
+                      String(getInsideTemperature())+","+
+                      String(getInsideHumidity())+","+
+                      String(fan_current);        
+        logg.print(format.c_str());
+    }
 }
 float Hive::getHeaterAverageCurrent(){ 
     if(avg_heater_cnt>0)
     {
-        return (sum_heater_current/avg_heater_cnt*3600.0+avg_heater_current)/(avg_heater_cnt+1);
+        return (sum_heater_current/avg_heater_cnt*3600.0+avg_heater_current)/(3601.0);
     }
     else
     {
@@ -408,6 +440,8 @@ void Hive::controlHeater(void)
     if(sht20Inside.isConnected())
     {
         heaterInput = sht20Inside.getTemperature();
+        if(progs[0].active)
+            setInsideTemperature(progs[0].dayTemperatureTarget);
         heater.Compute();
         setHeater(heaterOutput);
     }
@@ -469,7 +503,7 @@ void Hive::setProg(PROG_t prog,bool save)
 {
     if(save)
     {
-        ee.put(EE_ADD_HIVEPROGS_START+prog.id*EE_SZ_HIVEPROGS,prog);
+        ee.put(EE_ADD_HIVEPROGS_START+prog.id*sizeof(prog),prog);
         ee.commit();
     }
     memcpy(&progs[prog.id],&prog,sizeof(PROG_t));
@@ -484,10 +518,11 @@ void Hive::setPump(PUMP_t p,bool save)
     memcpy(&pump,&p,sizeof(PUMP_t));
 }
 _mode_t Hive::checkHeater(){
+    uint8_t p=getHeater();
     setHeater(255);
     delay(100);
-    heater_current=analogRead(ESP32_GPIO36_THERMALFEEDBACK)*33.0/1024.0;
-    setHeater(heaterOutput);
+    heater_current=readADC_Cal(ESP32_GPIO36_THERMALFEEDBACK)*10.0;
+    setHeater(p);
     if(heater_current>0.03)
         return MODEOK;
     else
@@ -496,11 +531,12 @@ _mode_t Hive::checkHeater(){
 }
 _mode_t Hive::checkFan()
 {
+    uint8_t s=getFan();
     setFan(255);
-    delay(100);
-    fan_current=analogRead(ESP32_GPIO33_FANFEEDBACK)*33.0/1024.0;
-    setFan(fan_speed);
-    if(fan_current>0.03)
+    delay(500);
+    fan_current=readADC_Cal(ESP32_GPIO33_FANFEEDBACK)*10.0;
+    setFan(s);
+    if(fan_current>0.02)
         return MODEOK;
     else
         return MODEFAIL;

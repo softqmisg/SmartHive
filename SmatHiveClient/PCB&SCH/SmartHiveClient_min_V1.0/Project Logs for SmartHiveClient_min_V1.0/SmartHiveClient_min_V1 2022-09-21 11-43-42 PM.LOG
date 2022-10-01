@@ -1,0 +1,2 @@
+Change Component Footprint: Designator=UP1 Old Footprint=TS5B_N New Footprint=TO263
+Added Member To Class: ClassName=SmartHiveClient_min_V1.0 Member=Component L1 1.5A

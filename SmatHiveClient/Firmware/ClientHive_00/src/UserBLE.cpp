@@ -86,7 +86,7 @@ BLECharacteristic readonlyCharactristics[READONLY_CHARACTRISTIC_NUMBER] = {
     BLECharacteristic(HIVE_CHECKST20INSIDE_UUID, BLECharacteristic::PROPERTY_READ),
     BLECharacteristic(HIVE_CHECKST20OUTSIDE_UUID, BLECharacteristic::PROPERTY_READ),
     BLECharacteristic(SUN_TIME_UUID, BLECharacteristic::PROPERTY_NOTIFY |BLECharacteristic::PROPERTY_READ),
-
+    BLECharacteristic(SDCARD_UUID, BLECharacteristic::PROPERTY_NOTIFY |BLECharacteristic::PROPERTY_READ),
 };
 BLEDescriptor *readonlyDescriptors[READONLY_CHARACTRISTIC_NUMBER];
 String readonlyDescriptorsValue[READONLY_CHARACTRISTIC_NUMBER] = {
@@ -101,8 +101,8 @@ String readonlyDescriptorsValue[READONLY_CHARACTRISTIC_NUMBER] = {
     "Hive Door State",
     "Hive's Weight",
     "Level of bee feeding",
-    "Heater current",
-    "Heater Average current",
+    "Heater current(mA)",
+    "Heater Average current(mA)",
     "Fan Status",
     "Pump Status",
     "Inside Sensor Status",
@@ -114,7 +114,8 @@ String readonlyDescriptorsValue[READONLY_CHARACTRISTIC_NUMBER] = {
     "Check Pump",
     "Check sht20 inside",
     "Check sht20 outside",
-    "Sunrise/Noon/Sunset"
+    "Sunrise/Noon/Sunset",
+    "SD MB(used/total)"
 };
 
 void bleInit()
@@ -394,6 +395,20 @@ void bleNotify(uint8_t code)
         readonlyCharactristics[READONLY_Sun].setValue(strTemp.c_str());
         readonlyCharactristics[READONLY_Sun].notify();
     }
-
+    if (code==READONLY_SDCARD)
+    {
+      if(SD.cardType()==CARD_NONE)
+      {
+        strTemp=="---/---";
+      }
+      else
+      {
+        uint64_t cardSize = SD.totalBytes() / (1024 * 1024);
+        uint64_t cardfree=SD.usedBytes() / (1024 * 1024);
+        strTemp=String((uint16_t)cardfree)+"/"+String((uint16_t)cardSize);
+      }
+        readonlyCharactristics[READONLY_SDCARD].setValue(strTemp.c_str());
+        readonlyCharactristics[READONLY_SDCARD].notify();
+    }
     // Serial.println(">>>>Initialize Notify");
 }

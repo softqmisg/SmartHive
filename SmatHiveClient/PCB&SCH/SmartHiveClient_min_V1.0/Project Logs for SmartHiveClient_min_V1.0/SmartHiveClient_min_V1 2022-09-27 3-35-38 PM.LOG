@@ -1,0 +1,6 @@
+Added Pin To Net: NetName=ESP32_GPIO26_THERMAL Pin=U1-2
+Added Pin To Net: NetName=ESP32_GPIO26_THERMAL Pin=U5-11
+Added Net: Name=ESP32_GPIO26_THERMAL
+Added Pin To Net: NetName=ESP32_GPIO27_FAN Pin=U3-2
+Added Pin To Net: NetName=ESP32_GPIO27_FAN Pin=U5-12
+Added Net: Name=ESP32_GPIO27_FAN

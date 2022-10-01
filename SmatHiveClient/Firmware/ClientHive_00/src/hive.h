@@ -8,16 +8,14 @@
 #include <SHT2x.h>
 #include "RTClib_Tiny.h"
 #include "ESP32Time.h"
-#include <FS.h>
-#include <SD.h>
-#include <SPI.h>
 #include "FreqCountESP.h"
 #include "position.h"
 #include "EEPROM.h"
+#include "log.h"
+#include "esp_adc_cal.h"
 
 
 #define DS1307_NVRAM_CHECK_BAT 2
-#define SDCARDSPEED 5000000
 #define HEATERPWMCHANNEL   0
 #define FANPWMCHANNEL   1
 #define LEDPWMCHANNEL   2
@@ -124,14 +122,14 @@ private:
     char swTxBuffer[16];
     char swRxBuffer[16];
     bool rtcneedAdjust = false;
-    ESP32Time rtcint;
     double heaterSetpoint=37.0, heaterInput, heaterOutput;
     bool deviceConnected=false;
     bool    doorState;
     static void onReedrelayISR();
     void setDoorState(int value){doorState=(value)?true:false;};
     bool hiveWeightState=false;
-    uint8_t fan_speed=0;
+    uint8_t fan_percent=0;
+    uint8_t heater_percent=0;
     float fan_current;
     float heater_current;
     float avg_heater_current;
@@ -151,17 +149,20 @@ private:
     PUMP_t pump;
     _sensorstate_t sht20inside_state;
     _sensorstate_t sht20outside_state;
+    uint32_t tik_counter=0;
+    uint32_t readADC_Cal(uint8_t ch);
 public:
     SHT2x sht20Inside;
     SHT2x sht20Outside;
     RTC_DS1307 rtcext;
     PID heater;
     _FreqCountESP FreqCountESP;
+    Logg logg;
+    ESP32Time rtcint;
     
     enum {StateDay,StateNight} hiveDiurnalState;
     enum {EmergencyState,NormalState} hiveOperationalState;
     Hive() : 
-        rtcint(0),
         heater_current(0.0),
         avg_heater_current(0.0),
         sum_heater_current(0.0),
@@ -171,15 +172,18 @@ public:
         pidCoeff{DEFAULT_KPCOEFF,DEFAULT_KICOEFF,DEFAULT_KDCOEFF},
         lightlevelNight{DEFAULT_LIGHT_NIGHT,DEFAULT_LIGHT_HSYTERESIS},
         pump_status(false),
-        heater(&heaterInput, &heaterOutput, &heaterSetpoint, DEFAULT_KPCOEFF,DEFAULT_KICOEFF,DEFAULT_KDCOEFF, DIRECT)
+        heater(&heaterInput, &heaterOutput, &heaterSetpoint, DEFAULT_KPCOEFF,DEFAULT_KICOEFF,DEFAULT_KDCOEFF, DIRECT),
+        rtcint(0)
         {};
     ~Hive(){};
     void begin(void);
     void update();
     void loaddefaultvalues();
 
-    void setFan(uint8_t percent) {ledcWrite(FANPWMCHANNEL, 256 - percent);};
-    void setHeater(uint8_t percent) {ledcWrite(HEATERPWMCHANNEL, 256 - percent); };
+    void setFan(uint8_t percent) {ledcWrite(FANPWMCHANNEL, 256 - percent); fan_percent=percent;};
+    uint8_t getFan() {return fan_percent;};
+    void setHeater(uint8_t percent) {ledcWrite(HEATERPWMCHANNEL, 256 - percent); heater_percent=percent;};
+    uint8_t getHeater(){return heater_percent;};
     void setPumpStatus(bool state){ 
         pump_status=state;
         if(state)
@@ -238,7 +242,7 @@ public:
     _feeding_t getHiveFeedingLevel(){return feeding_level;};
     float getHeaterCurrent(){return heater_current;}
     float getHeaterAverageCurrent();
-    bool getFanStatus(){return (fan_speed>0?true:false);};
+    bool getFanStatus(){return (fan_percent>0?true:false);};
     bool getPumpStatus(){ return (bool)pump_status;};
     _diurnal_t getDiurnalStatus(){return diurnal_status;};
 };

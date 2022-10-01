@@ -160,7 +160,10 @@ class readwriteCharactristicCallbacks : public BLECharacteristicCallbacks
       DateTime tmp_time =hive.getDateTime();
       tmp_str=String(tmp_time.hour())+":"+
               String(tmp_time.minute())+":"+
-              String(tmp_time.second());
+              String(tmp_time.second());//+","+
+              // String(tmp_time.year())+"-"+
+              // String(tmp_time.month())+"-"+
+              // String(tmp_time.day());
       pCharacteristic->setValue(tmp_str.c_str());
     }
     if (pCharacteristic->getUUID().equals(DATE_UUID))
@@ -288,18 +291,29 @@ class readwriteCharactristicCallbacks : public BLECharacteristicCallbacks
       }
       if (pCharacteristic->getUUID().equals(TIME_UUID))
       {
-        String h, m, s;
+        String h, m, s,y,mm,d;
         pos_deliminator[0] = value_str.indexOf(":");
         pos_deliminator[1] = value_str.indexOf(":", pos_deliminator[0] + 1);
         pos_deliminator[2] = value_str.indexOf(":", pos_deliminator[1] + 1);
+        // pos_deliminator[3] = value_str.indexOf("-", pos_deliminator[2] + 1);
+        // pos_deliminator[4] = value_str.indexOf("-", pos_deliminator[3] + 1);
+        // pos_deliminator[5] = value_str.indexOf("-", pos_deliminator[4] + 1);
         h = value_str.substring(0, pos_deliminator[0]);
         m = value_str.substring(pos_deliminator[0] + 1, pos_deliminator[1]);
         s = value_str.substring(pos_deliminator[1] + 1, pos_deliminator[2]);
+        // y = value_str.substring(pos_deliminator[2] + 1, pos_deliminator[3]);
+        // mm = value_str.substring(pos_deliminator[3] + 1, pos_deliminator[4]);
+        // d = value_str.substring(pos_deliminator[4] + 1, pos_deliminator[5]);
         DateTime tmp_time = hive.getDateTime();
         hive.setDateTime(DateTime(tmp_time.year(),
                                   tmp_time.month(),
                                   tmp_time.day(),
-                                  h.toInt(), m.toInt(), s.toInt()));
+                                  h.toInt(),
+                                  m.toInt(),
+                                  s.toInt()));
+        // DateTime tmp_time=DateTime(y.toInt(),mm.toInt(),d.toInt(),h.toInt(), m.toInt(), s.toInt());
+        // hive.setDateTime(tmp_time);
+
       }
       if (pCharacteristic->getUUID().equals(DATE_UUID))
       {
@@ -502,7 +516,7 @@ class readwriteCharactristicCallbacks : public BLECharacteristicCallbacks
  */
 static const BLEUUID READONLY_SERVICE_UUID("581c15b6-ae8f-4f55-b14d-bbe8b298db28");
 extern BLEService *readonlyService;
-#define READONLY_CHARACTRISTIC_NUMBER 25
+#define READONLY_CHARACTRISTIC_NUMBER 26
 
 #define READONLY_SerialNumber         0
 #define READONLY_Softwareversion      1
@@ -529,6 +543,7 @@ extern BLEService *readonlyService;
 #define READONLY_Checksht20Inside     22
 #define READONLY_Checksht20Outside    23
 #define READONLY_Sun                  24
+#define READONLY_SDCARD               25
 
 #define SERIAL_NUMBER_UUID      BLEUUID("734447d3-2cc6-4c0d-8eb6-ad942a931d01")
 #define SOFTWARE_VERSION_UUID   BLEUUID("a628a3d6-51b4-44c2-b2d1-37c9b8be6972")
@@ -555,6 +570,7 @@ extern BLEService *readonlyService;
 #define HIVE_CHECKST20INSIDE_UUID   BLEUUID("e02f6d38-6c4a-4389-8c9c-e980d522a491")
 #define HIVE_CHECKST20OUTSIDE_UUID  BLEUUID("85d9ed33-04a8-4b97-ac32-1a046ee871bc")
 #define SUN_TIME_UUID               BLEUUID("ededa9b6-a8f3-4f1b-8d20-bc3903499a91")
+#define SDCARD_UUID                 BLEUUID("d5cc63cf-0f29-4fef-bf2c-94334d1a7aa3")
 /**
  * @brief Readonly Charactristic Callbacks
  *
@@ -735,6 +751,22 @@ class readonlyCharactristicCallbacks : public BLECharacteristicCallbacks
               String(ss.second());                          
       pCharactristic->setValue(strTemp.c_str());
     }
+    if (pCharactristic->getUUID().equals(SDCARD_UUID))
+    {
+      if(SD.cardType()==CARD_NONE)
+      {
+        strTemp=="---/---";
+      }
+      else
+      {
+        uint64_t cardSize = SD.totalBytes() / (1024 * 1024);
+        uint64_t cardfree=SD.usedBytes() / (1024 * 1024);
+        strTemp=String((uint16_t)cardfree)+"/"+String((uint16_t)cardSize);
+      }
+      pCharactristic->setValue(strTemp.c_str());
+
+    }
+
   };
 };
 

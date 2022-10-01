@@ -1,0 +1,8 @@
+Added Pin To Net: NetName=ESP32_GPIO16_SDA1 Pin=P6-4
+Added Pin To Net: NetName=ESP32_GPIO16_SDA1 Pin=R20-1
+Added Pin To Net: NetName=ESP32_GPIO16_SDA1 Pin=U5-27
+Added Net: Name=ESP32_GPIO16_SDA1
+Added Pin To Net: NetName=ESP32_GPIO17_SCL1 Pin=P6-1
+Added Pin To Net: NetName=ESP32_GPIO17_SCL1 Pin=R21-1
+Added Pin To Net: NetName=ESP32_GPIO17_SCL1 Pin=U5-28
+Added Net: Name=ESP32_GPIO17_SCL1
