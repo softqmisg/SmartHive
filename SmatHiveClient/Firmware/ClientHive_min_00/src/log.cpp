@@ -92,7 +92,7 @@ void Logg::print(const char *format,...)
         // cur_file.seek(EOF);
         if(cur_indexinfile==0)
         {
-            if(!cur_file.println("time,date,h cur,h avg cur,h percent,pid output,pid setpoint,inside temp,inside Hum,fan cur"))
+            if(!cur_file.println("Time,Date,Inside Temp,Outside Temp,Inside Humidity,Outside Humidity,Heater Current,Heater Percent,Heater Avg Cur,Heater Mode,Fan Current,Fan Percent,Fan Mode,Hive Mode,SetPoint Temp,PID SetPoint,Weight"))
             {
                 Serial.println("write failed");
                 SD.end();
@@ -105,9 +105,15 @@ void Logg::print(const char *format,...)
             cur_indexinfile=0;
             SD.end();
             spi.end();
-
         }
-        cur_indexinfile++;
+        else
+        {
+            cur_indexinfile++;
+        }
+        if(cur_indexinfile>24*60) //24 hr*60min
+        {
+            cur_indexinfile=0;
+        }
     }
     cur_file.close();
 }

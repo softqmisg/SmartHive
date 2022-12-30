@@ -109,7 +109,7 @@ extern BLEService *readwriteService;
 #define FANMODE_UUID                BLEUUID("dc59a1c7-6536-4cff-a24b-4e0c3a28108b")
 #define HEATERMODE_UUID             BLEUUID("fdcbcf24-2aff-4ab4-a6bb-a656ce0dce0a")
 #define AUTO_PROG_UUID              BLEUUID("7b91fb80-a20d-4a97-b2ad-48728db985f8")
-#define STRILPROG_UUID              BLEUUID("7b91fb80-a20d-4a97-b2ad-48728db985f8")
+#define STRILPROG_UUID              BLEUUID("6c3dd7e6-060d-4390-9158-59f61637f408")
 #define HIVE_STATE_UUID             BLEUUID("c89076e1-7f68-4f6d-8a55-c4956c8da8e1")
 
 

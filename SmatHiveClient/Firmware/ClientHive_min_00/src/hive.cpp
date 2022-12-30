@@ -25,33 +25,32 @@ const PIDCoeff_t DEFAULT_PID={
     .kd=1.0,
 };
 /**
- * @brief Key press detction interrupt
- *
- */
-unsigned long button_time = 0;
-unsigned long last_button_time = 0;
-volatile bool keypress_f = false;
-portMUX_TYPE keyMux = portMUX_INITIALIZER_UNLOCKED;
-void IRAM_ATTR onKeyPress(void)
-{
-    button_time = millis();
-    if (button_time - last_button_time > 300)
-    {
-        portENTER_CRITICAL_ISR(&keyMux);
-        keypress_f = true;
-        portEXIT_CRITICAL_ISR(&keyMux);
-    }
-    last_button_time = button_time;
-}
-/**
  * @brief readadc calib
  * 
  */
-uint32_t Hive::readADC_Cal(uint8_t ch)
+uint32_t Hive::readADC_Cal(adc1_channel_t ch)
 {
+    uint32_t ADC_Raw=0;
   esp_adc_cal_characteristics_t adc_chars;
-  int ADC_Raw=analogRead(ch);
-  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
+  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1093, &adc_chars);
+  for(uint8_t i=0;i<50;i++)
+  {
+    ADC_Raw+=adc1_get_raw(ch);
+  }
+  ADC_Raw/=50;
+  return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
+}
+uint32_t Hive::readADC_Cal(int pin)
+{
+    uint32_t ADC_Raw=0;
+  esp_adc_cal_characteristics_t adc_chars;
+  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1093, &adc_chars);
+  for(uint8_t i=0;i<50;i++)
+  {
+    ADC_Raw+=analogRead(pin);
+  }
+  ADC_Raw/=50;
+  Serial.println("Raw:"+String(ADC_Raw));
   return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
 }
 /**
@@ -68,27 +67,52 @@ void Hive::loaddefaultvalues(void)
         ee.writeDouble(EE_ADD_LNG,DEFAULT_LNG);
         ee.writeString(EE_ADD_HIVE_NAME,DEFAULT_NAME);
         ee.writeLong(EE_ADD_BLEPASS,DEFAULT_BLEPASS);
-        ee.put(EE_ADD_PIDCOEFF,DEFAULT_PID);
-        ee.put(EE_ADD_AUTOPROG,DEFAULT_AUTOPROG);
-        ee.put(EE_ADD_STERILPROG,DEFAULT_STERILPROG);
+        ee.writeDouble(EE_ADD_KPCOEFF,DEFAULT_PID.kp);
+        ee.writeDouble(EE_ADD_KICOEFF,DEFAULT_PID.ki);
+        ee.writeDouble(EE_ADD_KDCOEFF,DEFAULT_PID.kd);
+        ee.writeDouble(EE_ADD_AUTOTEMP,DEFAULT_AUTOPROG.temperature);
+        ee.writeDouble(EE_ADD_AUTOFANHUM,DEFAULT_AUTOPROG.fanhumidity);
+        ee.writeDouble(EE_ADD_AUTOFANTEMP,DEFAULT_AUTOPROG.fantemperature);
+        ee.writeDouble(EE_ADD_AUTOHYSHUM,DEFAULT_AUTOPROG.fanhysthumidity);
+        ee.writeDouble(EE_ADD_AUTOHYSTEMP,DEFAULT_AUTOPROG.fanhysttemperature);
+        ee.writeDouble(EE_ADD_STERILTEMP,DEFAULT_STERILPROG.temperature);
+        ee.writeByte(EE_ADD_STERILHR,DEFAULT_STERILPROG.duration.hours());
+        ee.writeByte(EE_ADD_STERILMIN,DEFAULT_STERILPROG.duration.minutes());
+        ee.writeByte(EE_ADD_STERILSEC,DEFAULT_STERILPROG.duration.seconds());                
         ee.commit();
     }
     Serial.println("reading from  EEPROM");
     setPosition(ee.readDouble(EE_ADD_LAT),ee.readDouble(EE_ADD_LNG),false);
+    Serial.println("reading Position");
     sethiveName(ee.readString(EE_ADD_HIVE_NAME),false);
+    Serial.println("reading Name");
     setblepassword(ee.readLong(EE_ADD_BLEPASS),false);
-    setPID(ee.readAll(EE_ADD_PIDCOEFF,DEFAULT_PID),false);
-    setAutoProg(ee.readAll(EE_ADD_AUTOPROG,DEFAULT_AUTOPROG),false);
-    setSterilProg(ee.readAll(EE_ADD_STERILPROG,DEFAULT_STERILPROG),false);
+    Serial.println("reading ble pass");
+    setPID( ee.readDouble(EE_ADD_KPCOEFF),
+            ee.readDouble(EE_ADD_KICOEFF),
+            ee.readDouble(EE_ADD_KDCOEFF),
+            false);
+    Serial.println("reading PID");
+    setAutoProg(ee.readDouble(EE_ADD_AUTOTEMP),
+                ee.readDouble(EE_ADD_AUTOFANHUM),
+                ee.readDouble(EE_ADD_AUTOFANTEMP),
+                ee.readDouble(EE_ADD_AUTOHYSHUM),
+                ee.readDouble(EE_ADD_AUTOHYSTEMP),
+                false);
+    Serial.println("reading AutoProg");
+    setSterilProg(ee.readDouble(EE_ADD_STERILTEMP),
+                  ee.readByte(EE_ADD_STERILHR),
+                  ee.readByte(EE_ADD_STERILMIN),
+                  ee.readByte(EE_ADD_STERILSEC),
+                  false);
+    Serial.println("reading SterilProg");
 }
 /**
  * @brief Hive class start
  *
  */
-Hive *Hive::sHive = 0;
 void Hive::begin(void)
 {
-    sHive = this;
     if (ee.begin(EEPROM_SZ))
     {
         Serial.println("EEPROM OK");
@@ -98,6 +122,7 @@ void Hive::begin(void)
         Serial.println("EEPROM FAIL");
     }
     loaddefaultvalues();
+    Serial.println("loading default done!");
     // Set IO mods
     ledcSetup(HEATERPWMCHANNEL, 1000, 8);
     ledcAttachPin(ESP32_GPIO19_THERMAL, HEATERPWMCHANNEL); // pwm
@@ -111,8 +136,7 @@ void Hive::begin(void)
     // pinMode(ESP32_GPIO36_THERMALFEEDBACK, ANALOG); // analog input
     pinMode(ESP32_GPIO23_REED, INPUT);             // intterupt input
     pinMode(ESP32_GPIO15_KEYDOWN, INPUT); // interrupt input
-    attachInterrupt(digitalPinToInterrupt(ESP32_GPIO15_KEYDOWN), onKeyPress, FALLING);
-
+    Serial.println("Init pin done!");
     ///init  i2c & sht20
     I2C_1.begin(ESP32_GPIO21_SDA1, ESP32_GPIO22_SCL1);
     I2C_1.setTimeOut(1000);
@@ -120,6 +144,7 @@ void Hive::begin(void)
     I2C_2.setTimeOut(1000);
     sht20Inside.begin(&I2C_1);
     sht20Outside.begin(&I2C_2);
+    Serial.println("Init I2C1/2 & sht20s done!");
     //init scale
     scale.begin(ESP32_GPIO35_HX711_DT, ESP32_GPIO34_HX711_CLK);  
     scale.power_down();  
@@ -170,18 +195,22 @@ void Hive::begin(void)
         rtcint.setTime(0);
     ////////////////////////////////
     logg.begin(&rtcint);
+    Serial.println("init logging");
     ///////////////set PID/////////////
     heater.SetSampleTime(1000);
     heater.SetMode(AUTOMATIC);
+    Serial.println("init PID");
     /////////////////////////////
-    setFanMode(FANOFF);
-    setHeaterMode(HEATEROFF);
+    setFanMode(FANAUTO);
+    setHeaterMode(HEATERAUTO);
+    setHiveState(HIVEAUTO);
+    Serial.println("init fan Heater");
 }
 void Hive::update(void)
 {
     //read adcs
     avg_heater_cnt++;
-    heater_current=(float)readADC_Cal(ESP32_GPIO36_THERMALFEEDBACK)*10.0;
+    heater_current=(float)readADC_Cal(ESP32_THERMALFEEDBACK_CH)*10.0;
     sum_heater_current+=heater_current;
     if(avg_heater_cnt==3600)
     {
@@ -191,26 +220,21 @@ void Hive::update(void)
     }
 
     fan_current=readADC_Cal(ESP32_GPIO33_FANFEEDBACK)*10.0;
+
+    Serial.println("fan current:"+String(fan_current));
     //read sht20s
     if(sht20Inside.isConnected())
     {
         
         sht20Inside.read();
-        if(isDeviceConnected())
-        {
-            bleNotify(READONLY_InsideTemperature);
-            bleNotify(READONLY_InsideHumidity);
-        }
-        
+        bleNotify(READONLY_InsideTemperature);
+        bleNotify(READONLY_InsideHumidity);
     }
     if(sht20Outside.isConnected())
     {
         sht20Outside.read();
-        if(isDeviceConnected())
-        {
-            bleNotify(READONLY_OutsideTemperature);
-            bleNotify(READONLY_OutsideHumidity);
-        }
+        bleNotify(READONLY_OutsideTemperature);
+        bleNotify(READONLY_OutsideHumidity);
     }
     //read hx711
     if(scale.is_ready())
@@ -221,7 +245,7 @@ void Hive::update(void)
 
     DateTime now=rtcext.now();
     hiveposition.calculateSun(now);
-    if(rtcext.now().second()==0 && isDeviceConnected())
+    if(rtcext.now().second()==0)
     {
        bleNotify(READONLY_Sun);
     }
@@ -242,7 +266,7 @@ void Hive::update(void)
 
     ////logging datas
     tik_counter++;
-    if(tik_counter>=1*20)
+    if(tik_counter>=1*60)
     {
         tik_counter=0;
         String format=rtcint.getTime("%F") +"\n"+
@@ -255,18 +279,29 @@ void Hive::update(void)
                       "in temp:"+String(getInsideTemperature())+"\n"+
                       "in hum:"+String(getInsideHumidity())+"\n"+
                       "fan cur:"+String(fan_current);
+                      
         Serial.println(format);
         Serial.println("================================");
-        format=rtcint.getTime("%F")+","+
-               rtcint.getTime("%T")+","+
-                      String(getHeaterCurrent())+","+
-                      String(getHeaterAverageCurrent())+","+
-                      String(getHeater())+","+
-                      String(heaterOutput)+","+
-                      String(heaterSetpoint)+","+
-                      String(getInsideTemperature())+","+
-                      String(getInsideHumidity())+","+
-                      String(fan_current);        
+        // Date,Time,Inside Temp,Outside Temp,Inside Humidity,Outside Humidity,
+        //Heater Current,Heater Percent,Heater Avg Cur,Heater Mode,Fan Current,Fan Percent,Fan Mode
+        //Hive Mode,SetPoint Temp,PID SetPoint,Weight        
+        format=rtcint.getTime("%T")+","+
+               rtcint.getTime("%F")+","+
+               ((sht20Inside.isConnected())?String(getInsideTemperature()):"---")+","+
+               ((sht20Outside.isConnected())?String(getOutsideTemperature()):"---")+","+
+               ((sht20Inside.isConnected())?String(getInsideHumidity()):"---")+","+
+               ((sht20Outside.isConnected())?String(getOutsideHumidity()):"---")+","+
+                String(getHeaterCurrent())+","+
+                String(getHeater())+","+
+                String(getHeaterAverageCurrent())+","+
+                ((getHeaterMode()==HEATERAUTO)?"AUTO":((getHeaterMode()==HEATERON)?"ON":"OFF"))+
+                String(fan_current)+","+
+                String(getFan())+","+
+                ((getFanMode()==FANAUTO)?"AUTO":((getFanMode()==FANON)?"ON":"OFF"))+
+                ((getHiveState()==HIVEAUTO)?"AUTO":((getHiveState()==HIVESTERIL)?"STERIL":"OFF"))+
+                String(heaterSetpoint)+","+
+                String(getPID().kp)+":"+String(getPID().ki)+":"+String(getPID().kd)+","+
+                String(getHiveWeight(),1);
         logg.print(format.c_str());
     }
 }
@@ -289,7 +324,8 @@ void Hive::setFanMode(_fanmode_t mode)
 {
     fan_mode=mode;
     if(mode==FANAUTO)
-        ;
+    {
+    }
     else if(mode==FANOFF)
         setFan(0);
     else 
@@ -299,8 +335,10 @@ void Hive::setFanMode(_fanmode_t mode)
 }
 void Hive::setHeaterMode(_heatermode_t mode)
 {
+    heater_mode=mode;
     if(mode==HEATERAUTO)
-        ;
+    {
+    }
     else if(mode==HEATEROFF)
         setHeater(0);
     else 
@@ -410,17 +448,35 @@ void Hive::setPID(PIDCoeff_t pid,bool save)
 {
     if(save)
     {
-        ee.put(EE_ADD_PIDCOEFF,pid);
+        ee.writeDouble(EE_ADD_KPCOEFF,pid.kp);
+        ee.writeDouble(EE_ADD_KICOEFF,pid.ki);
+        ee.writeDouble(EE_ADD_KDCOEFF,pid.kd);
+
         ee.commit();        
     }
-    memcpy(&pidCoeff,&pid,sizeof(PID_COEFF_UUID));
+    memcpy(&pidCoeff,&pid,sizeof(PIDCoeff_t));
     heater.SetTunings(pidCoeff.kp,pidCoeff.ki,pidCoeff.kd);    
+}
+void Hive::setAutoProg(double temp,double fanhum,double fantemp,double fanhyshum,double fanhyttemp,bool save)
+{
+    AUTOProg_t t={
+        .temperature=temp,
+        .fanhumidity=fanhum,
+        .fantemperature=fantemp,
+        .fanhysthumidity=fanhyshum,
+        .fanhysttemperature=fanhyttemp
+    };
+    setAutoProg(t,save);
 }
 void Hive::setAutoProg(AUTOProg_t prog,bool save)
 {
     if(save)
     {
-        ee.put(EE_ADD_AUTOPROG,prog);
+        ee.writeDouble(EE_ADD_AUTOTEMP,prog.temperature);
+        ee.writeDouble(EE_ADD_AUTOFANHUM,prog.fanhumidity);
+        ee.writeDouble(EE_ADD_AUTOFANTEMP,prog.fantemperature);
+        ee.writeDouble(EE_ADD_AUTOHYSHUM,prog.fanhysthumidity);
+        ee.writeDouble(EE_ADD_AUTOHYSTEMP,prog.fanhysttemperature);
         ee.commit();
     }
     memcpy(&auto_prog,&prog,sizeof(AUTOProg_t));
@@ -429,7 +485,10 @@ void Hive::setSterilProg(STERILProg_t prog,bool save)
 {
     if(save)
     {
-        ee.put(EE_ADD_STERILPROG,prog);
+        ee.writeDouble(EE_ADD_STERILTEMP,prog.temperature);
+        ee.writeByte(EE_ADD_STERILHR,prog.duration.hours());
+        ee.writeDouble(EE_ADD_STERILMIN,prog.duration.minutes());
+        ee.writeDouble(EE_ADD_STERILSEC,prog.duration.seconds());
         ee.commit();        
     }
     memcpy(&steril_prog,&prog,sizeof(STERILProg_t));
@@ -444,12 +503,20 @@ void Hive::setSterilProg(double temp,TimeSpan duration,bool save)
     };
     setSterilProg(sprog,save);
 }
-
+void Hive::setSterilProg(double temp,int8_t hr,int8_t min,int8_t sec,bool save)
+{
+    STERILProg_t sprog=
+    {
+        .temperature=temp,
+        .duration=TimeSpan(0,hr,min,sec)
+    };
+    setSterilProg(sprog,save);
+}
 _mode_t Hive::checkHeater(){
     uint8_t p=getHeater();
     setHeater(255);
     delay(100);
-    heater_current=readADC_Cal(ESP32_GPIO36_THERMALFEEDBACK)*10.0;
+    heater_current=readADC_Cal(ESP32_THERMALFEEDBACK_CH)*10.0;
     setHeater(p);
     if(heater_current>0.03)
         return MODEOK;

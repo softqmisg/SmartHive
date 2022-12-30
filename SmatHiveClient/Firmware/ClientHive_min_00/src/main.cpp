@@ -37,15 +37,34 @@ void IRAM_ATTR onTimer0()
   portEXIT_CRITICAL_ISR(&timer0Mux);
 }
 
-uint8_t state = 1;
-float Voltage;
-int AN_Pot1_Result;
-uint32_t readADC_Cal(int ADC_Raw);
+/**
+ * @brief Key press detction interrupt
+ *
+ */
+unsigned long button_time = 0;
+unsigned long last_button_time = 0;
+volatile bool keypress_f = false;
+portMUX_TYPE keyMux = portMUX_INITIALIZER_UNLOCKED;
+void IRAM_ATTR onKeyPress(void)
+{
+    button_time = millis();
+    if (button_time - last_button_time > 300)
+    {
+        portENTER_CRITICAL_ISR(&keyMux);
+        keypress_f = true;
+        portEXIT_CRITICAL_ISR(&keyMux);
+    }
+    last_button_time = button_time;
+}
+//////////////////////////////////////////////////
 
 void setup()
 {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  Serial.println("*****************************");
+  Serial.println("* SMART HIVE,Sanjeh Novin   *");
+  Serial.println("*****************************");
   Serial.println(__FILE__);
   Serial.print("SHT20 LIB Version:");
   Serial.println(SHT2x_LIB_VERSION);
@@ -59,31 +78,70 @@ void setup()
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   //////////////////////////////////////////////
-  // ledcSetup(HEATERPWMCHANNEL, 1000, 8);
-  // ledcAttachPin(ESP32_GPIO19_THERMAL, HEATERPWMCHANNEL); // pwm
+  //   ledcSetup(HEATERPWMCHANNEL, 100, 8);
+  //   ledcAttachPin(ESP32_GPIO19_THERMAL,HEATERPWMCHANNEL ); // pwm
+  //   ledcSetup(FANPWMCHANNEL, 1000, 8);
+  //   ledcAttachPin(ESP32_GPIO18_FAN, FANPWMCHANNEL); // pwm
+  
+  //   ledcWrite(HEATERPWMCHANNEL, 256 - 255);//50/256*100
+  //   ledcWrite(FANPWMCHANNEL, 256 - 255);//0=off ,255=on
 
+  // esp_adc_cal_characteristics_t adc_chars;
+  // uint32_t ADC_Raw1,ADC_Raw2,x;
+  // x=esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_0, ADC_WIDTH_BIT_12, 1093, &adc_chars);
+  // Serial.println(adc_chars.adc_num);
+  // Serial.println(adc_chars.atten);
+  // Serial.println(adc_chars.bit_width);
+  // Serial.println(adc_chars.coeff_a);
+  // Serial.println(adc_chars.coeff_b);
+  // Serial.println(adc_chars.vref);
+
+  // while(1)
+  // {
+  // x=esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_0, ADC_WIDTH_BIT_12, 1093, &adc_chars);
+
+  //   ADC_Raw1=0;
+  //   for(uint8_t i=0;i<100;i++)
+  //   {
+  //     //ADC_Raw1+=adc1_get_raw(ESP32_THERMALFEEDBACK_CH);
+  //     ADC_Raw1+=(uint32_t)analogRead(ESP32_GPIO36_THERMALFEEDBACK);
+  //     delay(1);
+  //   }
+  //   ADC_Raw1/=100;
+  //   Serial.println(String(x)+":Heater:"+String(ADC_Raw1)+":"+String(esp_adc_cal_raw_to_voltage(ADC_Raw1, &adc_chars)));
+  //   ADC_Raw2=0;
+  //   ADC_Raw2=analogRead(ESP32_GPIO33_FANFEEDBACK);
+  //   Serial.println(String(x)+":FAN:"+String(ADC_Raw2)+":"+String(esp_adc_cal_raw_to_voltage(ADC_Raw2, &adc_chars)));
+
+  //   x=esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1093, &adc_chars);
+  //   ADC_Raw2=0;
+  //   ADC_Raw2=adc1_get_raw(ESP32_PHOTOCELL_CH);
+  //   Serial.println(":Photocell:"+String(ADC_Raw2)+":"+String(esp_adc_cal_raw_to_voltage(ADC_Raw2, &adc_chars)));
+
+
+  //   Serial.println("--------------------------------");
+  //   delay(1000);
+  // }
   ////////////////////////////////////////
-  hive.begin();
-  ////////////////////
-  // SerialBT.begin("SmartHive");
   bleInit();
-  ///////////////////
-  uint8_t heater_level, stat;
-  if (hive.sht20Inside.isConnected())
-  {
-    stat = hive.sht20Inside.getStatus();
-    Serial.println(stat, HEX);
-    hive.sht20Inside.getHeaterLevel(heater_level);
-    Serial.println(heater_level);
-  }
-  if (hive.sht20Outside.isConnected())
-  {
-    stat = hive.sht20Outside.getStatus();
-    Serial.println(stat, HEX);
-    hive.sht20Outside.getHeaterLevel(heater_level);
-    Serial.println(heater_level);
-    Serial.println();
-  }
+ hive.begin();
+  ////////////////////
+  // uint8_t heater_level, stat;
+  // if (hive.sht20Inside.isConnected())
+  // {
+  //   stat = hive.sht20Inside.getStatus();
+  //   Serial.println(stat, HEX);
+  //   hive.sht20Inside.getHeaterLevel(heater_level);
+  //   Serial.println(heater_level);
+  // }
+  // if (hive.sht20Outside.isConnected())
+  // {
+  //   stat = hive.sht20Outside.getStatus();
+  //   Serial.println(stat, HEX);
+  //   hive.sht20Outside.getHeaterLevel(heater_level);
+  //   Serial.println(heater_level);
+  //   Serial.println();
+  // }
   /////////////////////////////
   // init timer0_1s//
   timer0_1s = timerBegin(0, 80, true); // 80M/80=1Mhz
@@ -91,8 +149,10 @@ void setup()
   timerAlarmWrite(timer0_1s, 1000000, true); // every 1hz
   timerAlarmEnable(timer0_1s);
   // ///////////////////
-
-  ledcWrite(2, led_brightness); // max duty=2^bits
+   ledcSetup(LEDPWMCHANNEL, 1000, 8);
+  ledcAttachPin(ESP32_GPIO5_LED0, LEDPWMCHANNEL);            // pwm: freq=80M/2^bits
+  ledcWrite(LEDPWMCHANNEL, led_brightness); // max duty=2^bits
+    attachInterrupt(digitalPinToInterrupt(ESP32_GPIO15_KEYDOWN), onKeyPress, FALLING);
 
   //////////////////////////////
   Serial.println(hive.gethiveName());
@@ -106,14 +166,6 @@ void loop()
 {
   // put your main code here, to run repeatedly:
 
-    // ledcWrite(HEATERPWMCHANNEL,1);
-    // AN_Pot1_Result = analogRead(ESP32_GPIO36_THERMALFEEDBACK);
-    // Voltage = readADC_Cal(AN_Pot1_Result);
-    // Serial.println(AN_Pot1_Result);
-    // Serial.println(Voltage/1000.0); // Print Voltage (in V)
-    // Serial.println(Voltage);      // Print Voltage (in mV)
-    // Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    delay(500);
   if (keypress_f)
   {
     portENTER_CRITICAL_ISR(&keyMux);
@@ -144,14 +196,5 @@ void loop()
     led_brightness += 10;
     ledcWrite(LEDPWMCHANNEL, led_brightness);       // max duty=2^bits
     // Serial.println(hive.rtcint.getTimeDate());
-
-
   }
 }
-// uint32_t readADC_Cal(int ADC_Raw)
-// {
-//   esp_adc_cal_characteristics_t adc_chars;
-  
-//   esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
-//   return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
-// }

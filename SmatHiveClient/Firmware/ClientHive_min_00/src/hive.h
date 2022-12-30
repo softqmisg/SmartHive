@@ -126,7 +126,9 @@ private:
     _sensorstate_t sht20outside_state;
     uint32_t tik_counter=0;
     long timestamp;
-    uint32_t readADC_Cal(uint8_t ch);
+    uint32_t readADC_Cal(adc1_channel_t ch);
+  uint32_t readADC_Cal(int pin);
+  
     void setFan(uint8_t percent) {ledcWrite(FANPWMCHANNEL, 256 - percent); fan_percent=percent;};
     uint8_t getFan() {return fan_percent;};
     void setHeater(uint8_t percent) {ledcWrite(HEATERPWMCHANNEL, 256 - percent); heater_percent=percent;};
@@ -174,8 +176,10 @@ public:
     _heatermode_t getHeaterMode () {return heater_mode;}    
     void setSterilProg(STERILProg_t prog,bool save);
     void setSterilProg(double temp,TimeSpan duration,bool save);
+    void setSterilProg(double temp,int8_t hr,int8_t min,int8_t sec,bool save);
     STERILProg_t getSterilProg(){return steril_prog;};
     void setAutoProg(AUTOProg_t prog,bool save);
+    void setAutoProg(double temp,double fanhum,double fantemp,double fanhyshum,double fanhyttemp,bool save);
     AUTOProg_t getAutoProg(){return auto_prog;};
     void setPID(double kp,double ki,double kd,bool save);
     void setPID(PIDCoeff_t pid,bool save);

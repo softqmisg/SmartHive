@@ -23,26 +23,26 @@ BLECharacteristic readwriteCharactristics[READWRITE_CHARACTRISTIC_NUMBER] = {
 };
 BLEDescriptor *readwriteDescriptors[READWRITE_CHARACTRISTIC_NUMBER];
 String readwriteDescriptorsValue[READWRITE_CHARACTRISTIC_NUMBER] = {
-    "Position(degree)",
+    "Lat/Long(degree)",
     "Hive Name",
     "Time(hh:mm:ss)",
     "Date(yyyy-mm-dd)",
     "BLE Pair Password",
     "PID Coeff(kp,ki,kd)",
-    "FAN mode(AUTO/OFF/ON)",
-    "Heater mode(AUTO/OFF/ON)",
-    "Auto prog(temp,fanhum,fantemp,hyshum,hystemp)",
-    "Steril Prog(temp,duration hh:mm,ss)",
-    "Hive State(AUTO/STERIL/OFF)"
+    "FAN(AUTO/OFF/ON)",
+    "Heater(AUTO/OFF/ON)",
+    "Auto(T,FHM,FT,HH,HT)",
+    "Steril(T,hh:mm:ss)",
+    "Hive(AUTO/STERIL/OFF)"
     };
 /**
  * @brief readonly Charactristics and Descriptions
  *
  */
 BLECharacteristic readonlyCharactristics[READONLY_CHARACTRISTIC_NUMBER] = {
-    BLECharacteristic(SERIAL_NUMBER_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),      // Serial Number String
-    BLECharacteristic(SOFTWARE_VERSION_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),   // Software Version String
-    BLECharacteristic(HARDWARE_VERSION_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),   // Hardware Version String
+    BLECharacteristic(SERIAL_NUMBER_UUID,  BLECharacteristic::PROPERTY_READ),      // Serial Number String
+    BLECharacteristic(SOFTWARE_VERSION_UUID,  BLECharacteristic::PROPERTY_READ),   // Software Version String
+    BLECharacteristic(HARDWARE_VERSION_UUID,  BLECharacteristic::PROPERTY_READ),   // Hardware Version String
     BLECharacteristic(TEMP_INSIDE_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),        // Inside Temperature with Timestap:Temperature Measurement
     BLECharacteristic(HUM_INSIDE_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),         // Indide Humidity:Humidity
     BLECharacteristic(TEMP_OUTSIDE_UUID, BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_READ),       // Outside Temperature with Timestamp:Temperature Measurement
@@ -65,13 +65,13 @@ String readonlyDescriptorsValue[READONLY_CHARACTRISTIC_NUMBER] = {
     "Serial number",
     "Software Version",
     "Hardware Version",
-    "Inside Temperature(°C)",
+    "Inside Temperature(C)",
     "Inside Humidity(%)",
-    "Outside Temperature(°C)",
+    "Outside Temperature(C)",
     "Outside Humidity(%)",
     "Hive's Weight(gr)",
     "Heater current(mA)",
-    "Heater Average current(mA)",
+    "Heater Avg Cur(mA)",
     "Fan Status",
     "RTC Status",
     "Check Heater",
@@ -163,199 +163,202 @@ void bleInit()
 void bleNotify(uint8_t code)
 {
     String strTemp;
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_SerialNumber)
-    {
-        strTemp = SerialNumberString;
-        readonlyCharactristics[READONLY_SerialNumber].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_SerialNumber].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Softwareversion)
-    {
-        strTemp = SoftwareVersionString;
-        readonlyCharactristics[READONLY_Softwareversion].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_Softwareversion].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Hardwareversion)
-    {
-        strTemp = HardwareVersionString;
-        readonlyCharactristics[READONLY_Hardwareversion].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_Hardwareversion].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_InsideTemperature)
-    {
-        strTemp = (hive.checkSensorInside()==CONNECTOK)  ? String(hive.getInsideTemperature(), 1) : "---";
-        readonlyCharactristics[READONLY_InsideTemperature].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_InsideTemperature].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_InsideHumidity)
-    {
-        strTemp = (hive.checkSensorInside()==CONNECTOK)  ? String(hive.getInsideHumidity(), 0) : "---";
-        readonlyCharactristics[READONLY_InsideHumidity].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_InsideHumidity].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_OutsideTemperature)
-    {
-        strTemp = (hive.checkSensorOutside()==CONNECTOK) ? String(hive.getOutsideTemperature(), 1) : "---";
-        readonlyCharactristics[READONLY_OutsideTemperature].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_OutsideTemperature].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_OutsideHumidity)
-    {
-        strTemp = (hive.checkSensorOutside()==CONNECTOK) ? String(hive.getOutsideHumidity(), 0) : "---";
-        readonlyCharactristics[READONLY_OutsideHumidity].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_OutsideHumidity].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_HiveWeight)
-    {
-        strTemp = (hive.checkSensorScale()==CONNECTOK) ? String(hive.getHiveWeight()) : "---";
-        readonlyCharactristics[READONLY_HiveWeight].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_HiveWeight].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_HeaterCurrent)
-    {
-        strTemp = String(hive.getHeaterCurrent());
-        readonlyCharactristics[READONLY_HeaterCurrent].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_HeaterCurrent].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_HeaterAverageCurrent)
-    {
-        strTemp = String(hive.getHeaterAverageCurrent());
-        readonlyCharactristics[READONLY_HeaterAverageCurrent].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_HeaterAverageCurrent].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_FanStatus)
-    {
-        strTemp = (hive.getFanStatus() ? "ON" : "OFF");
-        readonlyCharactristics[READONLY_FanStatus].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_FanStatus].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_RTCStatus)
-    {
-        strTemp = (hive.getRTCStatus() ? "Adjust" : "Correct");
-        readonlyCharactristics[READONLY_RTCStatus].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_RTCStatus].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_CheckHeater)
-    {
-        strTemp=(hive.checkHeater()==MODEFAIL?"FAIL":"OK");
-        readonlyCharactristics[READONLY_CheckHeater].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_CheckHeater].notify();
-    }
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_CheckFan)
-    {
-        strTemp=(hive.checkFan()==MODEFAIL?"FAIL":"OK");
-        readonlyCharactristics[READONLY_CheckFan].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_CheckFan].notify();
-    }    
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Checksht20Inside)
-    {
-      _sensorstate_t st=hive.checkSensorInside();
-        if(st==DISCONNECT)
-        {
-          strTemp="Disconnect";
-        }
-        else if(st==CONNECTOK)
-        {
-          strTemp="Connect OK";
-        }
-        else 
-        {
-          strTemp="Connect Fail";
-        }        
-        readonlyCharactristics[READONLY_Checksht20Inside].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_Checksht20Inside].notify();
-    }        
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Checksht20Outside)
-    {
-        _sensorstate_t st=hive.checkSensorOutside();
-        if(st==DISCONNECT)
-        {
-          strTemp="Disconnect";
-        }
-        else if(st==CONNECTOK)
-        {
-          strTemp="Connect OK";
-        }
-        else 
-        {
-          strTemp="Connect Fail";
-        }        
-        readonlyCharactristics[READONLY_Checksht20Outside].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_Checksht20Outside].notify();
-    }  
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_CheckScale)
-    {
-        _sensorstate_t st=hive.checkSensorScale();
-        if(st==DISCONNECT)
-        {
-          strTemp="Disconnect";
-        }
-        else if(st==CONNECTOK)
-        {
-          strTemp="Connect OK";
-        }
-        else 
-        {
-          strTemp="Connect Fail";
-        }        
-        readonlyCharactristics[READONLY_CheckScale].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_CheckScale].notify();
-    }            
-    if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Sun)
-    {
-      DateTime sr=hive.getSunrise();
-      DateTime nn=hive.getNoon();
-      DateTime ss=hive.getSunset();
-      strTemp=String(sr.hour())+":"+
-              String(sr.minute())+":"+
-              String(sr.second())+","+
-              String(nn.hour())+":"+
-              String(nn.minute())+":"+
-              String(nn.second())+","+ 
-              String(ss.hour())+":"+
-              String(ss.minute())+":"+
-              String(ss.second());                          
-        readonlyCharactristics[READONLY_Sun].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_Sun].notify();
-    }
-    if (code==READONLY_SDCARD)
-    {
-      if(SD.cardType()==CARD_NONE)
+    if(hive.isDeviceConnected())
+    {    
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_SerialNumber)
       {
-        strTemp=="---/---";
+          strTemp = SerialNumberString;
+          readonlyCharactristics[READONLY_SerialNumber].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_SerialNumber].notify();
       }
-      else
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Softwareversion)
       {
-        uint64_t cardSize = SD.totalBytes() / (1024 * 1024);
-        uint64_t cardfree=SD.usedBytes() / (1024 * 1024);
-        strTemp=String((uint16_t)cardfree)+"/"+String((uint16_t)cardSize);
+          strTemp = SoftwareVersionString;
+          readonlyCharactristics[READONLY_Softwareversion].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_Softwareversion].notify();
       }
-        readonlyCharactristics[READONLY_SDCARD].setValue(strTemp.c_str());
-        readonlyCharactristics[READONLY_SDCARD].notify();
-    }
-    if(code==READWRITE_FanMode+100)
-    {
-      _fanmode_t fanmode=hive.getFanMode();
-      if(fanmode==FANAUTO)
-        strTemp="Auto";
-      else if(fanmode==FANOFF)
-        strTemp="OFF";
-      else
-        strTemp="ON";        
-        readwriteCharactristics[READWRITE_FanMode].setValue(strTemp.c_str());
-        readwriteCharactristics[READWRITE_FanMode].notify();
-    }
-    if(code==READWRITE_HeaterMode+100)
-    {
-      _heatermode_t heatermode=hive.getHeaterMode();
-      if(heatermode==HEATERAUTO)
-        strTemp="Auto";
-      else if(heatermode==HEATEROFF)
-        strTemp="OFF";
-      else
-        strTemp="ON";          
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Hardwareversion)
+      {
+          strTemp = HardwareVersionString;
+          readonlyCharactristics[READONLY_Hardwareversion].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_Hardwareversion].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_InsideTemperature)
+      {
+          strTemp = (hive.checkSensorInside()==CONNECTOK)  ? String(hive.getInsideTemperature(), 1) : "---";
+          readonlyCharactristics[READONLY_InsideTemperature].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_InsideTemperature].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_InsideHumidity)
+      {
+          strTemp = (hive.checkSensorInside()==CONNECTOK)  ? String(hive.getInsideHumidity(), 0) : "---";
+          readonlyCharactristics[READONLY_InsideHumidity].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_InsideHumidity].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_OutsideTemperature)
+      {
+          strTemp = (hive.checkSensorOutside()==CONNECTOK) ? String(hive.getOutsideTemperature(), 1) : "---";
+          readonlyCharactristics[READONLY_OutsideTemperature].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_OutsideTemperature].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_OutsideHumidity)
+      {
+          strTemp = (hive.checkSensorOutside()==CONNECTOK) ? String(hive.getOutsideHumidity(), 0) : "---";
+          readonlyCharactristics[READONLY_OutsideHumidity].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_OutsideHumidity].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_HiveWeight)
+      {
+          strTemp = (hive.checkSensorScale()==CONNECTOK) ? String(hive.getHiveWeight()) : "---";
+          readonlyCharactristics[READONLY_HiveWeight].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_HiveWeight].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_HeaterCurrent)
+      {
+          strTemp = String(hive.getHeaterCurrent());
+          readonlyCharactristics[READONLY_HeaterCurrent].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_HeaterCurrent].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_HeaterAverageCurrent)
+      {
+          strTemp = String(hive.getHeaterAverageCurrent());
+          readonlyCharactristics[READONLY_HeaterAverageCurrent].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_HeaterAverageCurrent].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_FanStatus)
+      {
+          strTemp = (hive.getFanStatus() ? "ON" : "OFF");
+          readonlyCharactristics[READONLY_FanStatus].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_FanStatus].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_RTCStatus)
+      {
+          strTemp = (hive.getRTCStatus() ? "Adjust" : "Correct");
+          readonlyCharactristics[READONLY_RTCStatus].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_RTCStatus].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_CheckHeater)
+      {
+          strTemp=(hive.checkHeater()==MODEFAIL?"FAIL":"OK");
+          readonlyCharactristics[READONLY_CheckHeater].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_CheckHeater].notify();
+      }
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_CheckFan)
+      {
+          strTemp=(hive.checkFan()==MODEFAIL?"FAIL":"OK");
+          readonlyCharactristics[READONLY_CheckFan].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_CheckFan].notify();
+      }    
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Checksht20Inside)
+      {
+        _sensorstate_t st=hive.checkSensorInside();
+          if(st==DISCONNECT)
+          {
+            strTemp="Disconnect";
+          }
+          else if(st==CONNECTOK)
+          {
+            strTemp="Connect OK";
+          }
+          else 
+          {
+            strTemp="Connect Fail";
+          }        
+          readonlyCharactristics[READONLY_Checksht20Inside].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_Checksht20Inside].notify();
+      }        
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Checksht20Outside)
+      {
+          _sensorstate_t st=hive.checkSensorOutside();
+          if(st==DISCONNECT)
+          {
+            strTemp="Disconnect";
+          }
+          else if(st==CONNECTOK)
+          {
+            strTemp="Connect OK";
+          }
+          else 
+          {
+            strTemp="Connect Fail";
+          }        
+          readonlyCharactristics[READONLY_Checksht20Outside].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_Checksht20Outside].notify();
+      }  
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_CheckScale)
+      {
+          _sensorstate_t st=hive.checkSensorScale();
+          if(st==DISCONNECT)
+          {
+            strTemp="Disconnect";
+          }
+          else if(st==CONNECTOK)
+          {
+            strTemp="Connect OK";
+          }
+          else 
+          {
+            strTemp="Connect Fail";
+          }        
+          readonlyCharactristics[READONLY_CheckScale].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_CheckScale].notify();
+      }            
+      if (code == READONLY_CHARACTRISTIC_NUMBER || code == READONLY_Sun)
+      {
+        DateTime sr=hive.getSunrise();
+        DateTime nn=hive.getNoon();
+        DateTime ss=hive.getSunset();
+        strTemp=String(sr.hour())+":"+
+                String(sr.minute())+":"+
+                String(sr.second())+","+
+                String(nn.hour())+":"+
+                String(nn.minute())+":"+
+                String(nn.second())+","+ 
+                String(ss.hour())+":"+
+                String(ss.minute())+":"+
+                String(ss.second());                          
+          readonlyCharactristics[READONLY_Sun].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_Sun].notify();
+      }
+      if (code==READONLY_SDCARD)
+      {
+        if(SD.cardType()==CARD_NONE)
+        {
+          strTemp=="---/---";
+        }
+        else
+        {
+          uint64_t cardSize = SD.totalBytes() / (1024 * 1024);
+          uint64_t cardfree=SD.usedBytes() / (1024 * 1024);
+          strTemp=String((uint16_t)cardfree)+"/"+String((uint16_t)cardSize);
+        }
+          readonlyCharactristics[READONLY_SDCARD].setValue(strTemp.c_str());
+          readonlyCharactristics[READONLY_SDCARD].notify();
+      }
+      if(code==READWRITE_FanMode+100)
+      {
+        _fanmode_t fanmode=hive.getFanMode();
+        if(fanmode==FANAUTO)
+          strTemp="AUTO";
+        else if(fanmode==FANOFF)
+          strTemp="OFF";
+        else
+          strTemp="ON";        
+          readwriteCharactristics[READWRITE_FanMode].setValue(strTemp.c_str());
+          readwriteCharactristics[READWRITE_FanMode].notify();
+      }
+      if(code==READWRITE_HeaterMode+100)
+      {
+        _heatermode_t heatermode=hive.getHeaterMode();
+        if(heatermode==HEATERAUTO)
+          strTemp="AUTO";
+        else if(heatermode==HEATEROFF)
+          strTemp="OFF";
+        else
+          strTemp="ON";          
         readwriteCharactristics[READWRITE_HeaterMode].setValue(strTemp.c_str());
         readwriteCharactristics[READWRITE_HeaterMode].notify();
+      }
+      //  Serial.println(">>>>no connection for Notify");
     }
-    // Serial.println(">>>>Initialize Notify");
 }
