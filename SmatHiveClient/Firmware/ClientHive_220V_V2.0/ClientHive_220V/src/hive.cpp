@@ -6,131 +6,29 @@
 TwoWire I2C_1(0);
 TwoWire I2C_2(1);
 SoftWire I2C_3(ESP32_GPIO27_RTC_SDA, ESP32_GPIO32_RTC_SCL);
-ACS712  ACS(ESP32_GPIO35_THERMALFEEDBACK, 3.3, 1023, 5.0);
+// ACS712  ACS(ESP32_GPIO35_THERMALFEEDBACK, 3.3, 1023, 5.0);
 
 
 DateTime BUILD_DATETIME(__DATE__,__TIME__);
-const PUMP_t DEFAULT_PUMP={
-    .turnonlevel=HALF,
-    .controlmode=LEVEL,
-    .turnontime=TimeSpan(0,0,1,0)
-};
-const PROG_t DEFAULT_PROG_1={
+
+PROG_t DEFAULT_AUTOPROG={
     .active=true,
     .id=0,
-    .start=DateTime(BUILD_DATETIME.year(),3,21,0,0,0),
-    .stop=DateTime(BUILD_DATETIME.year(),6,21,23,59,59),
-    .Sunrise=TimeSpan(0,0,0,0),
-    .Sunset=TimeSpan(0,0,0,0),
-    .minNormalTemperatureDay=17.0,
-    .minNormalTemperatureNight=8,
-    .dayTemperatureTarget=40.0,
-    .nightTemperatureTarget=12.0,
-    .emergencyTemperatureTarget=12.0,
+    .TemperatureTarget=12.0,
     .fanOnTemperature=35.0,
+    .fanTHysteresis=2.0,
     .fanOnHumidity=20.0,
-    .fanOnHysteresis=2.0,
-    .pumpOnDay=false,
-    .pumpOnNight=false,
-    .fanOnDay=true,
-    .fanOnNight=true,
-    .heaterOnDay=true,
-    .heaterOnNight=true
+    .fanHHysteresis=2.0,
     };
-const PROG_t DEFAULT_PROG_2={
+PROG_t DEFAULT_STERILPROG={
     .active=true,
-    .id=1,
-    .start=DateTime(BUILD_DATETIME.year(),6,22,0,0,0),
-    .stop=DateTime(BUILD_DATETIME.year(),9,22,23,59,59),
-    .Sunrise=TimeSpan(0,0,0,0),
-    .Sunset=TimeSpan(0,0,0,0),
-    .minNormalTemperatureDay=20.0,
-    .minNormalTemperatureNight=12.0,
-    .dayTemperatureTarget=20.0,
-    .nightTemperatureTarget=12.0,
-    .emergencyTemperatureTarget=12.0,
-    .fanOnTemperature=35.0,
-    .fanOnHumidity=60.0,
-    .fanOnHysteresis=2.0,
-    .pumpOnDay=false,
-    .pumpOnNight=false,
-    .fanOnDay=true,
-    .fanOnNight=true,
-    .heaterOnDay=true,
-    .heaterOnNight=true
+    .id=0,
+    .TemperatureTarget=40.0,
+    .fanOnTemperature=45.0,
+    .fanTHysteresis=2.0,
+    .fanOnHumidity=100.0,
+    .fanHHysteresis=2.0,
     };
-const PROG_t DEFAULT_PROG_3={
-    .active=true,
-    .id=2,
-    .start=DateTime(BUILD_DATETIME.year(),9,23,0,0,0),
-    .stop=DateTime(BUILD_DATETIME.year(),12,21,23,59,59),
-    .Sunrise=TimeSpan(0,0,0,0),
-    .Sunset=TimeSpan(0,0,0,0),
-    .minNormalTemperatureDay=10.0,
-    .minNormalTemperatureNight=-5.0,
-    .dayTemperatureTarget=15.0,
-    .nightTemperatureTarget=12.0,
-    .emergencyTemperatureTarget=12.0,
-    .fanOnTemperature=35.0,
-    .fanOnHumidity=60.0,
-    .fanOnHysteresis=2.0,
-    .pumpOnDay=true,
-    .pumpOnNight=true,
-    .fanOnDay=true,
-    .fanOnNight=false,
-    .heaterOnDay=true,
-    .heaterOnNight=true
-    };
-const PROG_t DEFAULT_PROG_4={
-    .active=true,
-    .id=3,
-    .start=DateTime(BUILD_DATETIME.year(),12,22,0,0,0),
-    .stop=DateTime(BUILD_DATETIME.year(),6,21,23,59,59),
-    .Sunrise=TimeSpan(0,0,0,0),
-    .Sunset=TimeSpan(0,0,0,0),
-    .minNormalTemperatureDay=0.0,
-    .minNormalTemperatureNight=-5.0,
-    .dayTemperatureTarget=15.0,
-    .nightTemperatureTarget=12.0,
-    .emergencyTemperatureTarget=12.0,
-    .fanOnTemperature=35.0,
-    .fanOnHumidity=60.0,
-    .fanOnHysteresis=2.0,
-    .pumpOnDay=false,
-    .pumpOnNight=false,
-    .fanOnDay=true,
-    .fanOnNight=false,
-    .heaterOnDay=true,
-    .heaterOnNight=true
-    };            
-/**
- * @brief Key press detction interrupt
- *
- */
-unsigned long button_time = 0;
-unsigned long last_button_time = 0;
-volatile bool keypress_f = false;
-portMUX_TYPE keyMux = portMUX_INITIALIZER_UNLOCKED;
-void IRAM_ATTR onKeyPress(void)
-{
-    button_time = millis();
-    if (button_time - last_button_time > 300)
-    {
-        portENTER_CRITICAL_ISR(&keyMux);
-        keypress_f = true;
-        portEXIT_CRITICAL_ISR(&keyMux);
-    }
-    last_button_time = button_time;
-}
-/**
- * @brief Interrupt for Door openning with redrelay
- *
- */
-void Hive::onReedrelayISR(void)
-{
-    if (sHive != 0)
-        sHive->setDoorState(0);//digitalRead(ESP32_GPIO23_REED));
-}
 /**
  * @brief readadc calib
  * 
@@ -148,7 +46,7 @@ uint32_t Hive::readADC_Cal(uint8_t ch)
  */
 void Hive::loaddefaultvalues(uint8_t load)
 {
-    if (((uint8_t)ee.readByte(EE_ADD_FIRSTTIME) != 0xaa)|| (digitalRead(ESP32_GPIO15_KEYDOWN)==0) || (load==1))
+    if (((uint8_t)ee.readByte(EE_ADD_FIRSTTIME) != 0xaa) || (load==1))//|| (digitalRead(ESP32_GPIO15_KEYDOWN)==0)
     { // save paramters in EEPROM
         Serial.println("Writing for first time in EEPROM");
         ee.writeByte(EE_ADD_FIRSTTIME,0xaa);
@@ -159,13 +57,8 @@ void Hive::loaddefaultvalues(uint8_t load)
         ee.writeDouble(EE_ADD_KPCOEFF,DEFAULT_KPCOEFF);
         ee.writeDouble(EE_ADD_KICOEFF,DEFAULT_KICOEFF);
         ee.writeDouble(EE_ADD_KDCOEFF,DEFAULT_KDCOEFF);
-        ee.writeUShort(EE_ADD_LIGHTNIGHT,DEFAULT_LIGHT_NIGHT);
-        ee.writeUShort(EE_ADD_LIGHTHYSTERESIS,DEFAULT_LIGHT_HSYTERESIS);        
-        ee.put(EE_ADD_HIVEPROGS_START+0*EE_SZ_HIVEPROGS,DEFAULT_PROG_1);
-        ee.put(EE_ADD_HIVEPROGS_START+1*EE_SZ_HIVEPROGS,DEFAULT_PROG_2);
-        ee.put(EE_ADD_HIVEPROGS_START+2*EE_SZ_HIVEPROGS,DEFAULT_PROG_3);
-        ee.put(EE_ADD_HIVEPROGS_START+3*EE_SZ_HIVEPROGS,DEFAULT_PROG_4);                
-        ee.put(EE_ADD_PUMP,DEFAULT_PUMP);
+        ee.put(EE_ADD_AUTOPROGS_START,DEFAULT_AUTOPROG);
+        ee.put(EE_ADD_STERILPROGS_START,DEFAULT_STERILPROG);
         ee.commit();
     }
     Serial.println("reading from  EEPROM");
@@ -176,12 +69,12 @@ void Hive::loaddefaultvalues(uint8_t load)
            ee.readDouble(EE_ADD_KICOEFF),
            ee.readDouble(EE_ADD_KDCOEFF),false
     );
-    setLight(ee.readUShort(EE_ADD_LIGHTNIGHT),ee.readUShort(EE_ADD_LIGHTHYSTERESIS),false);
-    setProg(ee.readAll(EE_ADD_HIVEPROGS_START+0*EE_SZ_HIVEPROGS,DEFAULT_PROG_1),false);
-    setProg(ee.readAll(EE_ADD_HIVEPROGS_START+1*EE_SZ_HIVEPROGS,DEFAULT_PROG_2),false);
-    setProg(ee.readAll(EE_ADD_HIVEPROGS_START+2*EE_SZ_HIVEPROGS,DEFAULT_PROG_3),false);
-    setProg(ee.readAll(EE_ADD_HIVEPROGS_START+3*EE_SZ_HIVEPROGS,DEFAULT_PROG_4),false);        
-    setPump(ee.readAll(EE_ADD_PUMP,DEFAULT_PUMP),false);
+
+    PROG_t tmp=ee.readAll(EE_ADD_AUTOPROGS_START,DEFAULT_AUTOPROG);
+    setAutoProg(tmp,false);
+    tmp=ee.readAll(EE_ADD_STERILPROGS_START,DEFAULT_STERILPROG);
+    setSterilProg(tmp,false);
+
 }
 /**
  * @brief Hive class start
@@ -201,22 +94,19 @@ void Hive::begin(void)
     }
     loaddefaultvalues(0);
     // Set IO mods
-    ledcSetup(HEATERPWMCHANNEL, 1000, 8);
-    ledcAttachPin(ESP32_GPIO19_THERMAL, HEATERPWMCHANNEL); // pwm
     ledcSetup(FANPWMCHANNEL, 5000, 8);
     ledcAttachPin(ESP32_GPIO18_FAN, FANPWMCHANNEL); // pwm
+    delay(20);
     ledcSetup(LEDPWMCHANNEL, 1000, 8);
     ledcAttachPin(ESP32_GPIO5_LED0, LEDPWMCHANNEL);            // pwm: freq=80M/2^bits
-    // pinMode(ESP32_GPIO4_PUMP, OUTPUT);             // gpio
-    // pinMode(ESP32_GPIO39_PHOTOCELL, ANALOG);       // analog input
-    // pinMode(ESP32_GPIO39_FANFEEDBACK, ANALOG);     // analog input
-    // pinMode(ESP32_GPIO35_THERMALFEEDBACK, ANALOG); // analog input
-    // pinMode(ESP32_GPIO23_REED, INPUT);             // intterupt input
-    // attachInterrupt(digitalPinToInterrupt(ESP32_GPIO23_REED), Hive::onReedrelayISR, CHANGE);
-    pinMode(ESP32_GPIO15_KEYDOWN, INPUT); // interrupt input
-    attachInterrupt(digitalPinToInterrupt(ESP32_GPIO15_KEYDOWN), onKeyPress, FALLING);
+    delay(20);
+    ledcSetup(HEATERPWMCHANNEL, 50, 8);
+    ledcAttachPin(ESP32_GPIO19_THERMAL, HEATERPWMCHANNEL); // pwm
+    delay(20);
 
-    // setDoorState(digitalRead(ESP32_GPIO23_REED));
+    // ledcSetup(6, 100, 8);
+    // ledcAttachPin(4, 6); // pwm
+    // delay(20);    
     ///
     I2C_1.begin(ESP32_GPIO21_SDA1, ESP32_GPIO22_SCL1);
     I2C_1.setTimeOut(1000);
@@ -225,7 +115,7 @@ void Hive::begin(void)
     sht20Outside.begin(&I2C_1);
     sht20Inside.begin(&I2C_2);
     //current sensor
-     ACS.autoMidPoint();
+    //  ACS.autoMidPoint();
     // init rtc_ext
     I2C_3.setTxBuffer(swTxBuffer, sizeof(swTxBuffer));
     I2C_3.setRxBuffer(swRxBuffer, sizeof(swRxBuffer));
@@ -240,7 +130,10 @@ void Hive::begin(void)
     {
         Serial.println("init ds1307");
     }
-    if (rtcext.readnvram(DS1307_NVRAM_CHECK_BAT) != 0xAA)
+    rtcextrunning=false;
+    if(rtcext.isrunning()) rtcextrunning=true;
+
+    if (rtcext.readnvram(DS1307_NVRAM_CHECK_BAT) != 0xAA && rtcextrunning)
     {
         rtcext.writenvram(DS1307_NVRAM_CHECK_BAT, 0xAA);
         rtcext.adjust(BUILD_DATETIME);
@@ -267,139 +160,123 @@ void Hive::begin(void)
         Serial.println("Read nvram ds1307 was ok");
     }
     // /////////////////////////////////
-    rtcint.setTime(rtcext.now().unixtime());
+    if(rtcextrunning)
+        rtcint.setTime(rtcext.now().unixtime());
+    else
+        rtcint.setTime(BUILD_DATETIME.unixtime());
     ////////////////////////////////
     logg.begin(&rtcint);
     ////////////////////////////
     heaterInput = sht20Inside.getTemperature();
-    if(progs[0].active)
-        setInsideTemperature(progs[0].dayTemperatureTarget);
+    setTargetTemperature(autoprog.TemperatureTarget);
     heater.SetSampleTime(1000);
     heater.SetMode(AUTOMATIC);
-
+    // heater.SetOutputLimits(0,1024);
+    setHiveState(HIVEAUTO);
     /////////////////////////////
-
-
     setFan(0);
     setHeater(0);
-    setPumpStatus(false);
+    ledcWrite(LEDPWMCHANNEL,led_brightness); // max duty=2^bits  1000hz
+    // ledcWrite(FANPWMCHANNEL, 128+64); // max duty=2^bits 100hz
+    // ledcWrite(HEATERPWMCHANNEL,64); // max duty=2^bits 50hz
+    // ledcWrite(6,128); // max duty=2^bits    5000hz
+
+
+    // while(1);
 }
 void Hive::update(void)
 {
-    // while(!FreqCountESP.available());
-    // uint32_t freq_r = FreqCountESP.read();
-    // double cap = 1.44 / (3 * freq_r) * 1e6 - CAP_OFFSET;  //pico farad      
-    // if(cap<=CAP_LEVEL_EMPTY)
-    //     feeding_level=EMPETY;
-    // else if(cap<=CAP_LEVEL_HALF)
-    //     feeding_level=HALF;
-    // else
-    //     feeding_level=FULL;
-    //read adcs
-    avg_heater_cnt++;
-    // heater_current=(float)readADC_Cal(ESP32_GPIO35_THERMALFEEDBACK);
-    heater_current= (float)ACS.mA_AC();
 
+    led_brightness = led_brightness+10*led_direction;
+    ledcWrite(LEDPWMCHANNEL, led_brightness);       // max duty=2^bits
+    if(led_brightness>=255)
+    {
+        led_direction*=-1;
+    }     
+    // Heater Current update,Average every 1Hr
+    avg_heater_cnt++;
+    heater_current= 0;//(float)ACS.mA_AC();
+    bleNotify(READONLY_HeaterCurrent);    
     sum_heater_current+=heater_current;
     if(avg_heater_cnt==3600)
     {
         avg_heater_current=(float)sum_heater_current/3600.0;
         sum_heater_current=0;
         avg_heater_cnt=0;
+        bleNotify(READONLY_HeaterAverageCurrent);
     }
-    // setFan(255);
-    fan_current=(float)readADC_Cal(ESP32_GPIO39_FANFEEDBACK)*3.3/(4812.8);
 
-    //read sht20s
-    if(sht20Inside.isConnected())
-    {
-        
-        sht20Inside.read();
-        if(isDeviceConnected())
-        {
-            bleNotify(READONLY_InsideTemperature);
-            bleNotify(READONLY_InsideHumidity);
-        }
-        
-    }
-    if(sht20Outside.isConnected())
-    {
-        sht20Outside.read();
-        if(isDeviceConnected())
-        {
-            bleNotify(READONLY_OutsideTemperature);
-            bleNotify(READONLY_OutsideHumidity);
-        }
-    }
+    //fan current mesurment
+    fan_current=(float)readADC_Cal(ESP32_GPIO39_FANFEEDBACK)/4.7;
     ///check time ,sun and day
-
-    DateTime now=rtcext.now();
+    DateTime now(rtcint.getYear(),rtcint.getMonth(),rtcint.getDay(),
+                 rtcint.getHour(),rtcint.getMinute(),rtcint.getSecond());
     hiveposition.calculateSun(now);
-    if(rtcext.now().second()==0 && isDeviceConnected())
+    if(rtcint.getSecond()==0)
     {
        bleNotify(READONLY_Sun);
     }
-    if((now.unixtime()>getSunrise().unixtime() )&&
-        (now.unixtime()<getSunset().unixtime()))
-    {
-        if(diurnal_status==NIGHT)
-        {
-            diurnal_status=DAY;
-            if(isDeviceConnected())
-            {
-                bleNotify(READONLY_HiveDiurnal);
-            }
-        }
-    }
-    else
-    {
-        if(diurnal_status==DAY)
-        {
-            diurnal_status=NIGHT;
-            if(isDeviceConnected())
-            {
-                bleNotify(READONLY_HiveDiurnal);
-            }            
-        }
-    }
     //check status
     //run control algorithm
-    if(getHiveState()==HIVEAUTO)
-    {
-      controlHeater();
-      float temp_t=getInsideTemperature(),temp_h=getInsideHumidity();
-      if(temp_h>progs[0].fanOnHumidity )
-      {
-        setFan(255);
-      }
-      else if(temp_h< progs[0].fanOnHumidity-progs[0].fanOnHysteresis)
-      {
-        setFan(0);
-      }
-      if(temp_t>progs[0].fanOnTemperature )
-      {
-        setFan(255);
-      }
-      else if(temp_t< progs[0].fanOnTemperature-progs[0].fanOnHysteresis)
-      {
-        setFan(0);
-      }      
-    }
-    else if(getHiveState()==HIVESTERIL)
-    {
+    //read sht20s
 
-    }
-    else if(getHiveState()==HIVEEMERGENCY)
+    if(sht20Outside.isConnected())
     {
-
+        sht20Outside.read();
+    }
+    bleNotify(READONLY_OutsideTemperature);
+    bleNotify(READONLY_OutsideHumidity);
+    float temp_t,temp_h;
+    if(sht20Inside.isConnected())
+    {
+        sht20Inside.read();
+        temp_t=getInsideTemperature(),temp_h=getInsideHumidity();
+        if(getHiveState()==HIVEAUTO)
+        {
+            controlHeater(autoprog);
+            if(temp_h>autoprog.fanOnHumidity )
+            {
+                setFan(255);
+            }
+            else if(temp_h< autoprog.fanOnHumidity-autoprog.fanHHysteresis)
+            {
+                setFan(0);
+            }
+            if(temp_t>autoprog.fanOnTemperature )
+            {
+                setFan(255);
+            }
+            else if(temp_t< autoprog.fanOnTemperature-autoprog.fanTHysteresis)
+            {
+                setFan(0);
+            }      
+        }
+        else if(getHiveState()==HIVESTERIL)
+        {
+            controlHeater(sterilprog);
+            if(temp_t>sterilprog.fanOnTemperature )
+            {
+                setFan(255);
+            }
+            else if(temp_t< sterilprog.fanOnTemperature-sterilprog.fanTHysteresis)
+            {
+                setFan(0);
+            }  
+        }
+        else
+        {
+            // setFan(0);
+            // setHeater(0);
+        }
     }
     else
     {
+        setHiveState(HIVEMANUAL);
         setFan(0);
         setHeater(0);
-        setPumpStatus(false);
     }
-
+    bleNotify(READONLY_InsideTemperature);
+    bleNotify(READONLY_InsideHumidity);     
     ////logging datas
     tik_counter++;
     if(tik_counter>=1*20)
@@ -441,15 +318,16 @@ float Hive::getHeaterAverageCurrent(){
     }
 };
 
-void Hive::controlHeater(void)
+void Hive::controlHeater(PROG_t prog)
 {
     if(sht20Inside.isConnected())
     {
         heaterInput = sht20Inside.getTemperature();
-        if(progs[0].active)
-            setInsideTemperature(progs[0].dayTemperatureTarget);
+        if(getTargetTemperature()!=prog.TemperatureTarget)
+            setTargetTemperature(prog.TemperatureTarget);
         heater.Compute();
-        setHeater(heaterOutput);
+        setHeater((uint8_t)heaterOutput);//
+        bleNotify(READONLY_PIDState);    
     }
     else
     {
@@ -494,41 +372,31 @@ void Hive::setPID(double kp,double ki,double kd,bool save)
     pidCoeff.kd=kd;
     heater.SetTunings(kp,ki,kd);
 }
-void Hive::setLight(uint16_t levelNight, uint16_t levelHysteresis,bool save)
+
+void Hive::setAutoProg(PROG_t prog,bool save)
 {
     if(save)
     {
-        ee.writeUShort(EE_ADD_LIGHTNIGHT,levelNight);
-        ee.writeUShort(EE_ADD_LIGHTHYSTERESIS,levelHysteresis);
-        ee.commit();        
-    }
-    lightlevelNight.level=levelNight;
-    lightlevelNight.hysteresis=levelHysteresis;
-}
-void Hive::setProg(PROG_t prog,bool save)
-{
-    if(save)
-    {
-        ee.put(EE_ADD_HIVEPROGS_START+prog.id*sizeof(prog),prog);
+        ee.put(EE_ADD_AUTOPROGS_START,prog);
         ee.commit();
     }
-    memcpy(&progs[prog.id],&prog,sizeof(PROG_t));
+    memcpy(&autoprog,&prog,sizeof(prog));
 }
-void Hive::setPump(PUMP_t p,bool save)
+void Hive::setSterilProg(PROG_t prog,bool save)
 {
     if(save)
     {
-        ee.put(EE_ADD_PUMP,p);
-        ee.commit();        
+        ee.put(EE_ADD_STERILPROGS_START,prog);
+        ee.commit();
     }
-    memcpy(&pump,&p,sizeof(PUMP_t));
+    memcpy(&sterilprog,&prog,sizeof(prog));
 }
 _mode_t Hive::checkHeater(){
     uint8_t p=getHeater();
     setHeater(255);
     delay(100);
     // heater_current=readADC_Cal(ESP32_GPIO35_THERMALFEEDBACK)*10.0;
-    heater_current=ACS.mA_AC();
+    heater_current=0;//ACS.mA_AC();
     setHeater(p);
     if(heater_current>0.03)
         return MODEOK;
@@ -541,7 +409,7 @@ _mode_t Hive::checkFan()
     uint8_t s=getFan();
     setFan(255);
     delay(500);
-    fan_current=(float)readADC_Cal(ESP32_GPIO39_FANFEEDBACK)*3.3/(4812.8);
+    fan_current=(float)readADC_Cal(ESP32_GPIO39_FANFEEDBACK)/4.7;
     setFan(s);
     if(fan_current>0.02)
         return MODEOK;

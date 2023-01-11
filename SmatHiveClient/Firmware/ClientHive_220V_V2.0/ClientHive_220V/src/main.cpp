@@ -23,9 +23,8 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
 #endif
 
-int led_brightness = 0;
+
 Hive hive;
-bool sendInitValuesToClient = false;
 ///////////////////////////////////////////////////////////////////
 hw_timer_t *timer0_1s = NULL;
 portMUX_TYPE timer0Mux = portMUX_INITIALIZER_UNLOCKED;
@@ -46,6 +45,7 @@ void setup()
 {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  setCpuFrequencyMhz(80);
   Serial.println(__FILE__);
   Serial.print("SHT20 LIB Version:");
   Serial.println(SHT2x_LIB_VERSION);
@@ -59,13 +59,13 @@ void setup()
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   //////////////////////////////////////////////
-  // ledcSetup(HEATERPWMCHANNEL, 1000, 8);
+  // ledcSetup(HEATERPWMCHANNEL, 50, 8);
   // ledcAttachPin(ESP32_GPIO19_THERMAL, HEATERPWMCHANNEL); // pwm
-
+  // ledcWrite(HEATERPWMCHANNEL,64);
+  // while(1);
   ////////////////////////////////////////
   hive.begin();
   ////////////////////
-  // SerialBT.begin("SmartHive");
   bleInit();
   ///////////////////
   uint8_t heater_level, stat;
@@ -91,71 +91,24 @@ void setup()
   timerAlarmWrite(timer0_1s, 1000000, true); // every 1hz
   timerAlarmEnable(timer0_1s);
   // ///////////////////
-
-  ledcWrite(2, led_brightness); // max duty=2^bits
-
-  //////////////////////////////
   Serial.println(hive.gethiveName());
   Serial.println(hive.getPosition().latitude,6);
   Serial.println(hive.getPosition().longitude,6);
   Serial.println(hive.getblepassword());
-  Serial.println(hive.getLight().level);
-  Serial.println(hive.getLight().hysteresis);
   
 }
-int led_direction=1;
+long mili=0;
 void loop()
 {
   // put your main code here, to run repeatedly:
 
-    // ledcWrite(HEATERPWMCHANNEL,1);
-    // AN_Pot1_Result = analogRead(ESP32_GPIO35_THERMALFEEDBACK);
-    // Voltage = readADC_Cal(AN_Pot1_Result);
-    // Serial.println(AN_Pot1_Result);
-    // Serial.println(Voltage/1000.0); // Print Voltage (in V)
-    // Serial.println(Voltage);      // Print Voltage (in mV)
-    // Serial.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    delay(500);
-  if (keypress_f)
-  {
-    portENTER_CRITICAL_ISR(&keyMux);
-    keypress_f = false;
-    portEXIT_CRITICAL_ISR(&keyMux);
-    Serial.println("Key pressed");
-  }
   if (timer0_f)
   {
     portENTER_CRITICAL(&timer0Mux);
     timer0_f = false;
     portEXIT_CRITICAL(&timer0Mux);
     hive.update();
-    if (hive.isDeviceConnected())
-    {
-      if (sendInitValuesToClient == false)
-      {
-        sendInitValuesToClient = true;
-        bleNotify(READONLY_CHARACTRISTIC_NUMBER);
-      }
-    }
-    else
-    {
-      sendInitValuesToClient = false;
-    }
 
-
-    led_brightness = led_brightness+10*led_direction;
-    ledcWrite(LEDPWMCHANNEL, led_brightness);       // max duty=2^bits
-    // Serial.println(hive.rtcint.getTimeDate());
-    if(led_brightness>=255)
-    {
-      led_direction*=-1;
-    }    
+   
   }
 }
-// uint32_t readADC_Cal(int ADC_Raw)
-// {
-//   esp_adc_cal_characteristics_t adc_chars;
-  
-//   esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
-//   return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
-// }
