@@ -1,9 +1,0 @@
-Added Pin To Net: NetName=ESP32_GPIO21_LED0 Pin=R19-1
-Added Pin To Net: NetName=ESP32_GPIO21_LED0 Pin=U5-33
-Added Net: Name=ESP32_GPIO21_LED0
-Added Pin To Net: NetName=ESP32_GPIO32_THERMAL Pin=U1-2
-Added Pin To Net: NetName=ESP32_GPIO32_THERMAL Pin=U5-8
-Added Net: Name=ESP32_GPIO32_THERMAL
-Added Pin To Net: NetName=ESP32_GPIO33_FAN Pin=U3-2
-Added Pin To Net: NetName=ESP32_GPIO33_FAN Pin=U5-9
-Added Net: Name=ESP32_GPIO33_FAN
