@@ -566,7 +566,8 @@ class readonlyCharactristicCallbacks : public BLECharacteristicCallbacks
     {
       String strTemp=String(hive.getTargetTemperature())+","+
                             String(hive.getInsideTemperature())+" 'C,"+
-                            String(hive.getHeater())+" %";
+                            String(hive.getHeater())+" ,"+
+                            String(hive.getHeater()/51*20)+" %";
                      
       pCharactristic->setValue(strTemp.c_str());
     }

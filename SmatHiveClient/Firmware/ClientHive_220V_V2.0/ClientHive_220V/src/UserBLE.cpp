@@ -309,7 +309,9 @@ void bleNotify(uint8_t code)
         {
             String strTemp=String(hive.getTargetTemperature())+","+
                             String(hive.getInsideTemperature())+" 'C,"+
-                            String(hive.getHeater())+" %";
+                            String(hive.getHeater())+" ,"+
+                            String(hive.getHeater()/51*20)+" %";
+
                         
             readonlyCharactristics[READONLY_PIDState].setValue(strTemp.c_str());
             readonlyCharactristics[READONLY_PIDState].notify();

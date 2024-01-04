@@ -234,22 +234,26 @@ void Hive::update(void)
         if(getHiveState()==HIVEAUTO)
         {
             controlHeater(autoprog);
-            if(temp_h>autoprog.fanOnHumidity )
-            {
+            if(temp_t<autoprog.TemperatureTarget)
                 setFan(255);
-            }
-            else if(temp_h< autoprog.fanOnHumidity-autoprog.fanHHysteresis)
-            {
+            else
                 setFan(0);
-            }
-            if(temp_t>autoprog.fanOnTemperature )
-            {
-                setFan(255);
-            }
-            else if(temp_t< autoprog.fanOnTemperature-autoprog.fanTHysteresis)
-            {
-                setFan(0);
-            }      
+            // if(temp_h>autoprog.fanOnHumidity )
+            // {
+            //     setFan(255);
+            // }
+            // else if(temp_h< autoprog.fanOnHumidity-autoprog.fanHHysteresis)
+            // {
+            //     setFan(0);
+            // }
+            // if(temp_t>autoprog.fanOnTemperature )
+            // {
+            //     setFan(255);
+            // }
+            // else if(temp_t< autoprog.fanOnTemperature-autoprog.fanTHysteresis)
+            // {
+            //     setFan(0);
+            // }      
         }
         else if(getHiveState()==HIVESTERIL)
         {

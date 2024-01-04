@@ -2,6 +2,8 @@
 #include "time.h"
 void Logg::begin(ESP32Time *rtc)
 {
+ 
+ #if 0
     // init SDCARD
     spi.begin(ESP32_GPIO14_SDSCK, ESP32_GPIO12_SDMISO, ESP32_GPIO13_SDMOSI, ESP32_GPIO26_SDCS);
     if (!SD.begin(ESP32_GPIO26_SDCS, spi, SDCARDSPEED))
@@ -39,10 +41,12 @@ void Logg::begin(ESP32Time *rtc)
         }    
     }
     cur_time=rtc;
+    #endif
 }
 void Logg::print(const char *format,...)
 {
-    ESP_LOGI(TAG)
+    #if 0
+    //ESP_LOGI(TAG)
     //Create File
     if(cur_indexinfile==0)
     {   
@@ -110,4 +114,5 @@ void Logg::print(const char *format,...)
         cur_indexinfile++;
     }
     cur_file.close();
+    #endif
 }
