@@ -18,7 +18,7 @@ data class SmartHiveDevice(
     val rssi: Int,
 )
 
-/** Scans for advertising peripherals whose name matches `SmartHiveXXXX`. */
+/** Scans for advertising peripherals whose name matches `SmartHive<number>`. */
 class BleScanner(private val context: Context) {
 
     private val adapter: BluetoothAdapter?

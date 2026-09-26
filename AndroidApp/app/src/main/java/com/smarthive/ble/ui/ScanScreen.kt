@@ -97,7 +97,7 @@ fun ScanScreen(
             }
 
             Text(
-                "Only peripherals advertising as SmartHiveXXXX are listed.",
+                "Only peripherals advertising as SmartHive<number> are listed.",
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.padding(top = 8.dp),
             )

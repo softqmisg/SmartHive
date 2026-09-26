@@ -76,7 +76,7 @@ object SmartHiveProtocol {
 
     const val NAME_PREFIX = "SmartHive"
 
-    private val namePattern = Regex("^SmartHive([0-9A-Za-z]{4})$")
+    private val namePattern = Regex("^SmartHive(\\d+)$")
 
     fun deviceIdOrNull(name: String?): String? =
         name?.trim()?.let { namePattern.find(it)?.groupValues?.get(1) }

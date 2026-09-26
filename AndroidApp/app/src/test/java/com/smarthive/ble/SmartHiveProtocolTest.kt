@@ -11,10 +11,12 @@ import org.junit.Test
 class SmartHiveProtocolTest {
 
     @Test
-    fun `matches only SmartHive names with a four character id`() {
-        assertEquals("0A17", SmartHiveProtocol.deviceIdOrNull("SmartHive0A17"))
-        assertNull(SmartHiveProtocol.deviceIdOrNull("SmartHive017"))
-        assertNull(SmartHiveProtocol.deviceIdOrNull("OtherHive0A17"))
+    fun `matches only SmartHive names with a numeric id`() {
+        assertEquals("0017", SmartHiveProtocol.deviceIdOrNull("SmartHive0017"))
+        assertEquals("1", SmartHiveProtocol.deviceIdOrNull("SmartHive1"))
+        assertNull(SmartHiveProtocol.deviceIdOrNull("SmartHive"))
+        assertNull(SmartHiveProtocol.deviceIdOrNull("SmartHive0A17"))
+        assertNull(SmartHiveProtocol.deviceIdOrNull("OtherHive17"))
     }
 
     @Test

@@ -348,7 +348,7 @@ private fun SettingsCard(
             Text("Board settings", style = MaterialTheme.typography.titleMedium)
 
             TextField(
-                label = "Hive name (SmartHiveXXXX)",
+                label = "Hive name (SmartHive<number>)",
                 current = values[HiveField.DeviceName],
                 validate = SmartHiveProtocol::isHiveName,
                 onWrite = { onWrite(HiveField.DeviceName, it) },
