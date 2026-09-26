@@ -113,6 +113,8 @@ fun DeviceScreen(viewModel: MainViewModel, onBack: () -> Unit) {
 
             ControlCard(values = values, onWrite = viewModel::write)
 
+            SettingsCard(values = values, onWrite = viewModel::write)
+
             InfoCard(
                 title = "Board",
                 fields = HiveField.entries.filter { it.group == HiveField.Group.Info },
@@ -121,7 +123,7 @@ fun DeviceScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             InfoCard(
                 title = "Diagnostics",
                 fields = HiveField.entries.filter {
-                    it.group == HiveField.Group.Diagnostics || it.group == HiveField.Group.Settings
+                    it.group == HiveField.Group.Diagnostics || it == HiveField.SunTime
                 },
                 values = values,
             )
@@ -257,15 +259,6 @@ private fun ControlCard(
     values: Map<HiveField, String>,
     onWrite: (HiveField, String) -> Unit,
 ) {
-    val quickFields = setOf(
-        HiveField.AutoProgram,
-        HiveField.HiveState,
-        HiveField.HeaterState,
-        HiveField.FanState,
-        HiveField.LoadDefault,
-    )
-    val writableFields = HiveField.entries.filter { it.writable && it !in quickFields }
-
     Card {
         Column(
             modifier = Modifier
@@ -294,15 +287,21 @@ private fun ControlCard(
                 onSelect = { onWrite(HiveField.FanState, it) },
             )
 
-            Text(
-                "Values below are plain text, exactly as the board expects them.",
-                style = MaterialTheme.typography.labelSmall,
+            CsvField(
+                label = "PID coefficients",
+                parts = listOf("KP", "KI", "KD"),
+                current = values[HiveField.PidCoeff],
+                validate = { it.all { part -> part.toFloatOrNull() != null } },
+                onWrite = { onWrite(HiveField.PidCoeff, it) },
             )
-            writableFields.forEach { field ->
-                WritableField(field = field, current = values[field], onWrite = onWrite)
-            }
-            OutlinedButton(onClick = { onWrite(HiveField.LoadDefault, "1") }) {
-                Text("Load board defaults")
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { onWrite(HiveField.LoadDefault, "1") }) {
+                    Text("Load defaults (1)")
+                }
+                OutlinedButton(onClick = { onWrite(HiveField.LoadDefault, "0") }) {
+                    Text("Send 0")
+                }
             }
         }
     }
@@ -333,13 +332,68 @@ private fun ChoiceRow(
     }
 }
 
+/** Settings the board expects in a fixed text shape: name, `lat,long`, `HH:MM:SS`, `YYYY-MM-DD`. */
 @Composable
-private fun WritableField(
-    field: HiveField,
-    current: String?,
+private fun SettingsCard(
+    values: Map<HiveField, String>,
     onWrite: (HiveField, String) -> Unit,
 ) {
+    Card {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Board settings", style = MaterialTheme.typography.titleMedium)
+
+            TextField(
+                label = "Hive name (SmartHiveXXXX)",
+                current = values[HiveField.DeviceName],
+                validate = SmartHiveProtocol::isHiveName,
+                onWrite = { onWrite(HiveField.DeviceName, it) },
+            )
+            Text(
+                "Renaming restarts the board, which drops the connection.",
+                style = MaterialTheme.typography.labelSmall,
+            )
+
+            CsvField(
+                label = "Position",
+                parts = listOf("Latitude", "Longitude"),
+                current = values[HiveField.Position],
+                validate = { it.all { part -> part.toDoubleOrNull() != null } },
+                onWrite = { onWrite(HiveField.Position, it) },
+            )
+
+            TextField(
+                label = "Time (HH:MM:SS)",
+                current = values[HiveField.Time],
+                validate = SmartHiveProtocol::isTime,
+                fillAction = "Now" to SmartHiveProtocol::now,
+                onWrite = { onWrite(HiveField.Time, it) },
+            )
+            TextField(
+                label = "Date (YYYY-MM-DD)",
+                current = values[HiveField.Date],
+                validate = SmartHiveProtocol::isDate,
+                fillAction = "Today" to SmartHiveProtocol::today,
+                onWrite = { onWrite(HiveField.Date, it) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun TextField(
+    label: String,
+    current: String?,
+    validate: (String) -> Boolean,
+    onWrite: (String) -> Unit,
+    fillAction: Pair<String, () -> String>? = null,
+) {
     var draft by remember(current) { mutableStateOf(current.orEmpty()) }
+    val valid = validate(draft)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -348,11 +402,53 @@ private fun WritableField(
         OutlinedTextField(
             value = draft,
             onValueChange = { draft = it },
-            label = { Text(field.label) },
+            label = { Text(label) },
+            isError = draft.isNotEmpty() && !valid,
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
-        OutlinedButton(onClick = { onWrite(field, draft) }) { Text("Set") }
+        fillAction?.let { (text, value) ->
+            OutlinedButton(onClick = { draft = value() }) { Text(text) }
+        }
+        OutlinedButton(onClick = { onWrite(draft.trim()) }, enabled = valid) { Text("Set") }
+    }
+}
+
+/** One editor per comma separated component, written back as `a,b,c`. */
+@Composable
+private fun CsvField(
+    label: String,
+    parts: List<String>,
+    current: String?,
+    validate: (List<String>) -> Boolean,
+    onWrite: (String) -> Unit,
+) {
+    var draft by remember(current) {
+        mutableStateOf(SmartHiveProtocol.parts(current, parts.size))
+    }
+    val valid = validate(draft)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            parts.forEachIndexed { index, name ->
+                OutlinedTextField(
+                    value = draft[index],
+                    onValueChange = { draft = draft.toMutableList().also { l -> l[index] = it } },
+                    label = { Text(name) },
+                    isError = draft[index].isNotEmpty() && !valid,
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            OutlinedButton(
+                onClick = { onWrite(draft.joinToString(",") { it.trim() }) },
+                enabled = valid,
+            ) { Text("Set") }
+        }
     }
 }
 

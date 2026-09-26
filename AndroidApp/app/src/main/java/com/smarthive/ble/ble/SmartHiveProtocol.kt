@@ -1,5 +1,7 @@
 package com.smarthive.ble.ble
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
@@ -27,7 +29,7 @@ enum class HiveField(
     HeaterState(uuid("7b91fb80-a20d-4a97-b2ad-48728db985f8"), "Heater state", writable = true, group = Group.Control),
     FanState(uuid("03a51ab4-0b51-4db3-8783-f7e350c847a1"), "Fan state", writable = true, group = Group.Control),
     AutoProgram(uuid("fdcbcf24-2aff-4ab4-a6bb-a656ce0dce0a"), "Auto program (setpoints)", writable = true, group = Group.Control),
-    SterilProgram(uuid("04231659-8ce4-4a5e-a246-af8fb502c4b8"), "Sterilisation program", writable = true, group = Group.Control),
+    SterilProgram(uuid("04231659-8ce4-4a5e-a246-af8fb502c4b8"), "Sterilisation program", group = Group.Hidden),
     PidCoeff(uuid("e887f503-36fd-463d-b4d6-77f024094347"), "PID coefficients", writable = true, group = Group.Control),
     PidState(uuid("a1a7eb92-db3a-4714-82fb-7f953ced4264"), "PID state", group = Group.Control),
     LoadDefault(uuid("ed930b8d-6932-4e0a-962d-bbc2eba56d2c"), "Load defaults", writable = true, group = Group.Control),
@@ -36,7 +38,7 @@ enum class HiveField(
     Position(uuid("bcd72712-7705-49c5-b2a8-bbc0eb72a988"), "Position", writable = true, group = Group.Settings),
     Time(uuid("fb75341e-8ab1-4355-9b69-39471f6be25d"), "Time", writable = true, group = Group.Settings),
     Date(uuid("ae928490-34aa-4e9c-be83-0ca678f5eda2"), "Date", writable = true, group = Group.Settings),
-    BlePassword(uuid("f1120eac-310b-4ffe-93c3-1d8aba7c58f5"), "BLE password", writable = true, group = Group.Settings),
+    BlePassword(uuid("f1120eac-310b-4ffe-93c3-1d8aba7c58f5"), "BLE password", group = Group.Hidden),
     SunTime(uuid("ededa9b6-a8f3-4f1b-8d20-bc3903499a91"), "Sun time", group = Group.Settings),
 
     SerialNumber(uuid("734447d3-2cc6-4c0d-8eb6-ad942a931d01"), "Serial number", group = Group.Info),
@@ -52,7 +54,8 @@ enum class HiveField(
     CheckSt20Outside(uuid("85d9ed33-04a8-4b97-ac32-1a046ee871bc"), "ST20 outside self-test", group = Group.Diagnostics),
     ;
 
-    enum class Group { Live, Control, Settings, Info, Diagnostics, Status }
+    /** [Hidden] fields exist on the board but are deliberately not exposed by the app. */
+    enum class Group { Live, Control, Settings, Info, Diagnostics, Status, Hidden }
 
     companion object {
         val byUuid: Map<UUID, HiveField> = entries.associateBy { it.uuid }
@@ -119,6 +122,25 @@ object SmartHiveProtocol {
 
     /** Always dot-decimal, whatever the phone locale is. */
     private fun wire(value: Float) = String.format(Locale.US, "%.2f", value)
+
+    /** Splits a comma separated value into [count] trimmed parts, padding with empty strings. */
+    fun parts(text: String?, count: Int): List<String> {
+        val parts = text.orEmpty().split(',').map { it.trim() }
+        return List(count) { parts.getOrElse(it) { "" } }
+    }
+
+    private val timePattern = Regex("^\\d{1,2}:\\d{1,2}:\\d{1,2}$")
+    private val datePattern = Regex("^\\d{4}-\\d{1,2}-\\d{1,2}$")
+
+    fun isTime(text: String) = timePattern.matches(text.trim())
+
+    fun isDate(text: String) = datePattern.matches(text.trim())
+
+    fun isHiveName(text: String) = deviceIdOrNull(text) != null
+
+    fun now(): String = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
+
+    fun today(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 }
 
 data class HiveProgram(

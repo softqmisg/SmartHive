@@ -12,8 +12,12 @@ Android client for the SmartHive board's BLE GATT interface
 - Auto program editor over `HIVE_AUTOPROG_UUID`
   (`active,id,TemperatureTarget,fanOnTemperature,fanTHysteresis,fanOnHumidity,fanHHysteresis`);
   fields that are not edited are written back unchanged.
-- Hive state (`AUTO`/`MANUAL`/`STERIL`), heater and fan `ON`/`OFF` controls, plus a text editor
-  for the remaining writable characteristics (position, time, date, PID, sterilisation program…).
+- Hive state (`AUTO`/`MANUAL`/`STERIL`), heater and fan `ON`/`OFF` chips, `KP,KI,KD` PID editor and
+  a `1`/`0` load-defaults button.
+- Validated settings editors: hive name (`SmartHiveXXXX`), position (`lat,long`), time
+  (`HH:MM:SS`) and date (`YYYY-MM-DD`), each with a "Set" button that stays disabled until the
+  text matches what the firmware parses.
+- `BLE_PASSWORD_UUID` and `HIVE_STERILPROG_UUID` are deliberately not exposed (`Group.Hidden`).
 - Inside temperature vs time chart with the target temperature drawn as a reference line.
 - A "simulated device" entry in the scan list for trying the UI without hardware.
 
